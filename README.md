@@ -77,71 +77,74 @@ This structure ensures:
 ```bash
 git clone https://github.com/littlepasluv/property-sales-intelligence-mini.git
 cd property-sales-intelligence-mini
+```
 
-2️⃣ Create and activate virtual environment
+### 2️⃣ Create and activate virtual environment
+```bash
 python -m venv venv
 source venv/bin/activate   # macOS / Linux
+```
 
-3️⃣ Install dependencies
+### 3️⃣ Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-4️⃣ Run the application
+### 4️⃣ Run the application
+```bash
 uvicorn app.main:app --reload
+```
 
-
-Open:
-
+Open your browser at:
 http://127.0.0.1:8000/docs
 
-🧪 Testing
+---
+
+## 🧪 Testing
 
 The project includes automated API tests that cover:
-
-Core lead and follow-up workflows
-
-Validation errors and edge cases
-
-API response consistency
+- Core lead and follow-up workflows
+- Validation errors and edge cases
+- API response consistency
 
 Run all tests with:
-
+```bash
 pytest
+```
 
-🔮 Roadmap
+---
+
+## 🔮 Roadmap
 
 Planned improvements include:
+- Analytics and reporting dashboard
+- Lead scoring and prioritization
+- Authentication and role-based access
+- Integration with messaging or advertising platforms
 
-Analytics and reporting dashboard
+---
 
-Lead scoring and prioritization
-
-Authentication and role-based access
-
-Integration with messaging or advertising platforms
-
-🌍 Reusability & Extensibility
+## 🌍 Reusability & Extensibility
 
 Although this project uses property sales as a domain example,
 the architecture is intentionally domain-agnostic.
 With minimal changes, it can be adapted for:
+- Community engagement tracking
+- NGO program monitoring
+- Research data collection systems
+- Customer relationship management (CRM) tools
 
-Community engagement tracking
+---
 
-NGO program monitoring
+## 📌 Project Status
 
-Research data collection systems
+- **Current version**: v0.1.0
+- **Stage**: MVP foundation
+- **Focus**: Stability, clarity, and extensibility
 
-Customer relationship management (CRM) tools
+---
 
-📌 Project Status
-
-Current version: v0.1.0
-
-Stage: MVP foundation
-
-Focus: Stability, clarity, and extensibility
-
-🧭 License
+## 🧭 License
 
 This project is currently shared for learning and demonstration purposes.
 A formal license can be added in future iterations.
