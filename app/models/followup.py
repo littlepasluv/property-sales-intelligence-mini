@@ -30,4 +30,5 @@ class Followup(Base):
     )
 
     # Relationship to Lead
+    # Using string "Lead" avoids circular import issues
     lead = relationship("Lead", back_populates="followups")
