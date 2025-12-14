@@ -1,12 +1,13 @@
-# Virtual environment
-venv/
-
-# Python cache
+# Python
 __pycache__/
 *.pyc
 
-# Environment variables
+# Virtual environment
+venv/
 .env
 
 # IDE
 .idea/
+
+# OS
+.DS_Store
