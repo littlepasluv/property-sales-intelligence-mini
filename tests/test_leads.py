@@ -23,6 +23,7 @@ def test_create_lead_success(client: TestClient):
     
     # Assert that the response contains the created data
     assert "id" in data
+    assert isinstance(data["id"], int)  # Strict type check
     assert data["name"] == lead_data["name"]
     assert data["phone"] == lead_data["phone"]
     assert data["email"] == lead_data["email"]
@@ -30,3 +31,13 @@ def test_create_lead_success(client: TestClient):
     assert data["notes"] == lead_data["notes"]
     assert data["status"] == "new"  # Check default status
     assert "created_at" in data
+
+def test_get_leads_empty(client: TestClient):
+    """
+    Tests that getting leads from an empty database returns an empty list.
+    """
+    response = client.get("/api/v1/leads/")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 0
