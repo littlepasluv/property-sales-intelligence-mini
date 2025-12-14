@@ -99,7 +99,7 @@ Open your browser at:
 http://127.0.0.1:8000/docs
 
 <!-- Replace 'app_screenshot.png' with your actual file name -->
-![Application Interface](/Users/prionugroho/Desktop/Screenshot 2025-12-14 at 17.43.00.png)
+![Application Interface](assets/app_screenshot.png)
 *Figure: Application Interface / API Documentation*
 
 ---
