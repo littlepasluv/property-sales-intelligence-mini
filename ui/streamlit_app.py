@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # --- Data Fetching ---
-@st.cache_data(ttl=60)  # Cache data for 60 seconds to avoid spamming the API
+@st.cache_data(ttl=60)  # Cache data for 60 seconds
 def fetch_dashboard_analytics():
     """
     Fetches analytics data from the backend API.
@@ -20,7 +20,7 @@ def fetch_dashboard_analytics():
     """
     try:
         response = requests.get(API_URL)
-        response.raise_for_status()  # Raise exception for 4xx/5xx errors
+        response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ Error connecting to backend: {e}")
@@ -42,6 +42,7 @@ if analytics_data:
     # --- Key Metrics Section ---
     st.header("📊 Key Metrics")
     
+    # Top-level KPIs
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric(label="Total Leads", value=leads_data.get("total_leads", 0))
@@ -59,7 +60,15 @@ if analytics_data:
     
     lead_status = leads_data.get("by_status", {})
     if lead_status:
-        st.write("Leads by Status:")
+        # Display status breakdown in columns
+        st.subheader("Status Breakdown")
+        cols = st.columns(len(lead_status))
+        for i, (status, count) in enumerate(lead_status.items()):
+            with cols[i]:
+                st.metric(label=status.title(), value=count)
+        
+        # Simple chart
+        st.write("Leads by Status Chart:")
         st.bar_chart(lead_status)
     else:
         st.info("No lead data available yet.")
@@ -71,7 +80,15 @@ if analytics_data:
     
     followup_status = followups_data.get("by_status", {})
     if followup_status:
-        st.write("Follow-ups by Status:")
+        # Display status breakdown in columns
+        st.subheader("Status Breakdown")
+        cols = st.columns(len(followup_status))
+        for i, (status, count) in enumerate(followup_status.items()):
+            with cols[i]:
+                st.metric(label=status.title(), value=count)
+        
+        # Simple chart
+        st.write("Follow-ups by Status Chart:")
         st.bar_chart(followup_status)
     else:
         st.info("No follow-up data available yet.")
