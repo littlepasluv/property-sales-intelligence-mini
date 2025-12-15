@@ -150,6 +150,8 @@ With minimal changes, it can be adapted for:
 
 ## 🧭 License
 
+This repository serves as a reusable backend foundation for data-driven sales intelligence products.
+
 This project is currently shared for learning and demonstration purposes.
 A formal license can be added in future iterations.
 
