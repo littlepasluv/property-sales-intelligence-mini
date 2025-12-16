@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+from .followup import Followup  # Import the Followup schema
 
 class LeadBase(BaseModel):
     name: str = Field(..., description="Name of the potential client", json_schema_extra={"example": "Budi Santoso"})
@@ -17,4 +18,18 @@ class LeadCreate(LeadBase):
 class Lead(LeadBase):
     id: int
     created_at: datetime
+    followups: List[Followup] = []  # Include followups in the main lead schema
+    model_config = ConfigDict(from_attributes=True)
+
+class LeadAnalytics(BaseModel):
+    """Schema for a lead with calculated analytics fields."""
+    id: int
+    name: str
+    status: str
+    source: str
+    age_days: int
+    sla_breached: bool
+    risk_score: int
+    risk_level: str
+    followup_count: int
     model_config = ConfigDict(from_attributes=True)

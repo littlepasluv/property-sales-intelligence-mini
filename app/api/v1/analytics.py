@@ -1,23 +1,21 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from typing import List
 
 from app.core.database import get_db
-from app.schemas.analytics import DashboardAnalytics
-from app.services import analytics_service
+from app.schemas.lead import LeadAnalytics
+from app.services.lead_service import get_leads_with_analytics
 
 router = APIRouter(
     prefix="/analytics",
     tags=["Analytics"]
 )
 
-@router.get(
-    "/dashboard",
-    response_model=DashboardAnalytics,
-    summary="Get dashboard analytics"
-)
-def get_dashboard_metrics(db: Session = Depends(get_db)):
+@router.get("/risk_profile", response_model=List[LeadAnalytics])
+def get_lead_risk_profile(db: Session = Depends(get_db)):
     """
-    Retrieve aggregated business metrics for the main dashboard.
-    Includes total counts and status breakdowns for leads and follow-ups.
+    Retrieves all leads with their calculated risk and SLA analytics.
+    This data is computed on-the-fly and not stored in the database.
     """
-    return analytics_service.get_dashboard_analytics(db)
+    analytics_data = get_leads_with_analytics(db)
+    return analytics_data

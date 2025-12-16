@@ -74,7 +74,7 @@ def setup_sidebar(df):
 
 def render_executive_summary(df):
     """Renders the high-level executive summary view."""
-    st.header("📊 Executive Key Metrics")
+    st.header("Executive Snapshot")
     
     total_leads = len(df)
     high_risk_leads = len(df[df['risk_level'] == 'High'])
@@ -93,7 +93,7 @@ def render_executive_summary(df):
         st.metric(label="⏰ SLA Breached", value=sla_breached_count)
     
     st.markdown("---")
-    st.header("💡 AI-Driven Insights")
+    st.subheader("Strategic Insights")
     st.info(
         """
         **Summary:** The sales pipeline shows a steady flow of new leads, but a significant portion are flagged as 'High Risk' due to slow follow-up times. 
@@ -104,7 +104,7 @@ def render_executive_summary(df):
 
 def render_sales_analytics(df):
     """Renders the detailed sales performance analytics view."""
-    st.header("🎯 Sales Performance Analytics")
+    st.header("Performance Breakdown")
 
     # 1. Lead Status Distribution
     st.subheader("Lead Status Distribution")
@@ -133,7 +133,7 @@ def render_sales_analytics(df):
 
 def render_risk_sla_dashboard(df):
     """Renders the risk and SLA breach analysis view."""
-    st.header("🚨 Risk & SLA Dashboard")
+    st.header("Risk & SLA Alerts")
     
     high_risk_leads = len(df[df['risk_level'] == 'High'])
     sla_breached_count = df['sla_breached'].sum()
@@ -145,7 +145,7 @@ def render_risk_sla_dashboard(df):
         st.metric(label="⏰ SLA Breached Leads", value=sla_breached_count)
     
     st.markdown("---")
-    st.subheader("Lead Risk Details")
+    st.subheader("Detailed Lead Table")
     
     display_cols = ["name", "status", "age_days", "sla_breached", "risk_score", "risk_level"]
     column_config = {
@@ -156,7 +156,13 @@ def render_risk_sla_dashboard(df):
 
 # --- Main Application ---
 st.title("🏠 Property Sales Intelligence (Mini)")
-st.markdown("### Data-driven insights for property sales")
+st.caption("Internal decision-support tool for property agents and sales operators.")
+
+st.info("""
+**Operational Focus:** Monitor lead health → Identify SLA risks → Take action.
+This dashboard highlights stalled leads and SLA breaches to help prioritize daily follow-ups.
+""")
+
 st.markdown("---")
 
 # Fetch and prepare data once
