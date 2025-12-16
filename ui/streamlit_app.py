@@ -113,11 +113,25 @@ def render_executive_summary(df):
 
     st.markdown("---")
     st.subheader("Strategic Insights")
+    
+    # Refactored insights section for clarity and actionability
     st.info(
         """
-        **Summary:** The pipeline shows a steady flow of new leads, but a significant portion are flagged as 'High Risk' due to slow follow-up times. 
-        - **Recommendation:** Prioritize outreach to leads in the 'High Risk' and 'SLA Breached' categories to improve conversion potential.
-        - **Observation:** Leads from 'Referral' sources continue to show the highest conversion rates.
+        **Pipeline Health & Action Plan:**
+        
+        *   **Signal:** A significant portion of leads are currently flagged as 'High Risk' or have breached SLA thresholds.
+            *   **Risk:** Delayed follow-ups increase the likelihood of leads going cold and reduce overall conversion potential.
+            *   **Action:** Direct sales agents to prioritize the 'High Risk' list immediately before engaging with new inbound leads.
+
+        *   **Signal:** Referral leads consistently demonstrate a higher conversion rate compared to other channels.
+            *   **Opportunity:** High-quality leads from referrals are closing faster but may be under-utilized.
+            *   **Action:** Allocate more senior agents to referral leads to maximize close rates and encourage further referrals.
+
+        *   **Signal:** Social media leads (Instagram/Facebook) show longer average response times.
+            *   **Risk:** These channels require speed; slow responses may damage brand reputation and lose interest quickly.
+            *   **Action:** Review and streamline the initial contact process for social media inquiries to reduce first-response delay.
+        
+        _Note: Insights are based on current data patterns and should be reviewed periodically as lead volume grows._
         """
     )
 
