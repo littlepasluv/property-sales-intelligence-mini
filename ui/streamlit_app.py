@@ -82,6 +82,17 @@ def render_executive_summary(df):
     closed_leads = len(df[df['status'] == 'closed'])
     conversion_rate = (closed_leads / total_leads * 100) if total_leads > 0 else 0
 
+    # --- Confidence Logic ---
+    if total_leads >= 50:
+        confidence_level = "High"
+        insight_nature = "Robust"
+    elif total_leads >= 15:
+        confidence_level = "Medium"
+        insight_nature = "Directional"
+    else:
+        confidence_level = "Low"
+        insight_nature = "Highly Directional"
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric(
@@ -109,31 +120,34 @@ def render_executive_summary(df):
         )
 
     st.caption("These metrics are designed for at-a-glance awareness. Use the 'Risk & SLA' view for detailed analysis.")
-    st.warning("Heads up: Leads marked as 'High-Risk' or having 'SLA Breaches' should be prioritized for immediate follow-up to prevent them from going cold.")
-
-    st.markdown("---")
-    st.subheader("Strategic Insights")
     
-    # Refactored insights section for clarity and actionability
-    st.info(
-        """
-        **Pipeline Health & Action Plan:**
-        
-        *   **Signal:** A significant portion of leads are currently flagged as 'High Risk' or have breached SLA thresholds.
-            *   **Risk:** Delayed follow-ups increase the likelihood of leads going cold and reduce overall conversion potential.
-            *   **Action:** Direct sales agents to prioritize the 'High Risk' list immediately before engaging with new inbound leads.
+    st.markdown("---")
+    st.subheader("Executive Insights")
+    
+    # Strict format implementation
+    st.info(f"""
+    **Executive Summary**
+    The pipeline shows active engagement, but a high volume of SLA breaches suggests operational bottlenecks. Due to the current sample size ({total_leads} leads), these insights are **{insight_nature}**.
 
-        *   **Signal:** Referral leads consistently demonstrate a higher conversion rate compared to other channels.
-            *   **Opportunity:** High-quality leads from referrals are closing faster but may be under-utilized.
-            *   **Action:** Allocate more senior agents to referral leads to maximize close rates and encourage further referrals.
+    **Key Signals**
+    *   **Referral Efficiency:** Referral leads are currently showing higher conversion potential than other sources.
+    *   **Response Lag:** Social media leads (Instagram/Facebook) exhibit longer response times, correlating with higher risk scores.
+    *   **Risk Volume:** A significant proportion of the pipeline is flagged as 'High Risk' due to stalled follow-ups.
 
-        *   **Signal:** Social media leads (Instagram/Facebook) show longer average response times.
-            *   **Risk:** These channels require speed; slow responses may damage brand reputation and lose interest quickly.
-            *   **Action:** Review and streamline the initial contact process for social media inquiries to reduce first-response delay.
-        
-        _Note: Insights are based on current data patterns and should be reviewed periodically as lead volume grows._
-        """
-    )
+    **Risks & Watchouts**
+    *   **Operational Risk:** Delayed follow-ups are the primary driver of the current risk profile.
+    *   **Data Limitation:** Trends should be validated as volume increases beyond 50 leads.
+
+    **Recommendations**
+    *   Prioritize 'High Risk' leads for immediate follow-up today.
+    *   Review notification settings for social media channels to improve response speed.
+
+    **Confidence & Notes**
+    *   **Confidence Level:** {confidence_level}
+    *   **Sample Size:** {total_leads} Leads
+    *   **Time Window:** Last ~21 Days
+    *   *Disclaimer: These insights are based on limited data and should be used as signals rather than definitive conclusions.*
+    """)
 
 def render_sales_analytics(df):
     """Renders the detailed sales performance analytics view."""
