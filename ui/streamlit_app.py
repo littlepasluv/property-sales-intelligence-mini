@@ -31,6 +31,7 @@ def fetch_all_leads():
     try:
         response = requests.get(f"{API_BASE_URL}/leads/")
         response.raise_for_status()
+        # The API returns a list of leads, each with a nested list of followups
         return response.json()
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ Error fetching lead details: {e}")
@@ -98,9 +99,7 @@ def render_lead_aging_analysis(leads_df, status_filter):
         st.info(f"No leads with status '{status_filter}'.")
         return
 
-    # FIX: Ensure created_at is timezone-aware (UTC) to match datetime.now(timezone.utc)
     leads_df['created_at'] = pd.to_datetime(leads_df['created_at'], utc=True)
-
     leads_df['age_days'] = (datetime.now(timezone.utc) - leads_df['created_at']).dt.days
     avg_age = leads_df['age_days'].mean()
 
@@ -131,6 +130,74 @@ def render_source_performance(leads_df, status_filter):
     
     st.subheader("Performance by Source")
     st.dataframe(source_agg.style.format({'conversion_rate': '{:.1f}%'}), use_container_width=True)
+
+def render_first_followup_delay(leads_df):
+    """
+    Calculates and renders the average first follow-up delay per lead source.
+    """
+    st.header("⏱️ First Follow-up Speed")
+    st.markdown("Measures the average time (in days) from lead creation to the first follow-up.")
+
+    if leads_df.empty or 'followups' not in leads_df.columns:
+        st.info("No lead data available to calculate follow-up delay.")
+        return
+
+    # This list will store the delay calculated for each lead that has follow-ups
+    delays = []
+    
+    # Ensure lead 'created_at' is a datetime object for calculations
+    leads_df['created_at'] = pd.to_datetime(leads_df['created_at'], utc=True)
+
+    for _, lead in leads_df.iterrows():
+        # Skip leads that have no follow-ups
+        if not lead['followups']:
+            continue
+
+        # Convert the nested list of follow-up dicts into a DataFrame
+        followups_df = pd.DataFrame(lead['followups'])
+        
+        # Ensure follow-up 'created_at' is a datetime object
+        followups_df['created_at'] = pd.to_datetime(followups_df['created_at'], utc=True)
+        
+        # Find the timestamp of the very first follow-up
+        first_followup_time = followups_df['created_at'].min()
+        
+        # Calculate the delay between lead creation and the first follow-up
+        delay = first_followup_time - lead['created_at']
+        
+        delays.append({
+            'source': lead['source'],
+            'delay_days': delay.total_seconds() / (24 * 3600)  # Convert seconds to days
+        })
+
+    if not delays:
+        st.info("No leads with follow-ups found to analyze.")
+        return
+
+    # Create a DataFrame from the calculated delays and group by source to find the average
+    delay_df = pd.DataFrame(delays)
+    avg_delay_by_source = delay_df.groupby('source')['delay_days'].mean().sort_values()
+
+    st.subheader("Average Delay by Lead Source")
+
+    # Display results in columns using Streamlit's metric component
+    cols = st.columns(len(avg_delay_by_source))
+    for i, (source, avg_delay) in enumerate(avg_delay_by_source.items()):
+        with cols[i]:
+            st.metric(label=f"{source}", value=f"{avg_delay:.1f} Days")
+
+    # Also display as a bar chart for visual comparison
+    fig = px.bar(
+        avg_delay_by_source,
+        y=avg_delay_by_source.values,
+        x=avg_delay_by_source.index,
+        labels={'x': 'Lead Source', 'y': 'Average Delay (Days)'},
+        title="Average First Follow-up Delay by Source",
+        text_auto='.1f'
+    )
+    fig.update_layout(showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
+
 
 # --- Main Application ---
 st.title("🏠 Property Sales Intelligence (Mini)")
@@ -170,8 +237,14 @@ if raw_analytics_data and all_leads_list is not None:
     st.markdown("---")
     
     leads_df = pd.DataFrame(all_leads_list)
+    
+    # Render the new follow-up delay analysis section
+    render_first_followup_delay(leads_df.copy())
+    st.markdown("---")
+
     render_lead_aging_analysis(leads_df.copy(), lead_filter)
     st.markdown("---")
+
     render_source_performance(leads_df.copy(), lead_filter)
     st.markdown("---")
     
