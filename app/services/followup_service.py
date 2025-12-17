@@ -5,9 +5,10 @@ from typing import List
 from app.models.followup import Followup
 from app.models.lead import Lead
 from app.schemas.followup import FollowupCreate
+from app.core.cache import clear_cache
 
 def create_followup(db: Session, followup_in: FollowupCreate) -> Followup:
-    """Create a new follow-up record for a lead."""
+    """Create a new follow-up record for a lead and invalidate cache."""
     
     # 1. Validate that the lead exists
     lead = db.query(Lead).filter(Lead.id == followup_in.lead_id).first()
@@ -24,6 +25,9 @@ def create_followup(db: Session, followup_in: FollowupCreate) -> Followup:
     db.add(db_followup)
     db.commit()
     db.refresh(db_followup)
+    
+    # 4. Invalidate cache
+    clear_cache()
     
     return db_followup
 
