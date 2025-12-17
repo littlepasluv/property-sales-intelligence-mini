@@ -8,6 +8,7 @@ from app.services.lead_service import get_leads_with_analytics, get_all_leads
 from app.services.persona_insight_service import generate_all_persona_insights
 from app.services.alert_service import generate_alerts
 from app.services.trust_service import calculate_data_freshness
+from app.services.data_quality_service import analyze_data_quality
 
 router = APIRouter(
     prefix="/analytics",
@@ -30,6 +31,15 @@ def get_data_freshness(db: Session = Depends(get_db)):
     leads = get_all_leads(db)
     freshness_data = calculate_data_freshness(leads)
     return freshness_data
+
+@router.get("/data_quality", response_model=Dict[str, Any])
+def get_data_quality(db: Session = Depends(get_db)):
+    """
+    Analyzes the overall data quality and returns a confidence score.
+    """
+    leads = get_all_leads(db)
+    quality_report = analyze_data_quality(leads)
+    return quality_report
 
 @router.get("/persona_insights", response_model=str)
 def get_persona_insights(persona: str, db: Session = Depends(get_db)):
