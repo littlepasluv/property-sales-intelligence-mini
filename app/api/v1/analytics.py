@@ -4,9 +4,10 @@ from typing import List, Dict, Any
 
 from app.core.database import get_db
 from app.schemas.lead import LeadAnalytics
-from app.services.lead_service import get_leads_with_analytics
+from app.services.lead_service import get_leads_with_analytics, get_all_leads
 from app.services.persona_insight_service import generate_all_persona_insights
 from app.services.alert_service import generate_alerts
+from app.services.trust_service import calculate_data_freshness
 
 router = APIRouter(
     prefix="/analytics",
@@ -16,10 +17,19 @@ router = APIRouter(
 @router.get("/risk_profile", response_model=List[LeadAnalytics])
 def get_lead_risk_profile(db: Session = Depends(get_db)):
     """
-    Retrieves all leads with their calculated risk and SLA analytics.
+    Retrieves all leads with their calculated risk, SLA, and trust analytics.
     """
     analytics_data = get_leads_with_analytics(db)
     return analytics_data
+
+@router.get("/data_freshness", response_model=Dict[str, Any])
+def get_data_freshness(db: Session = Depends(get_db)):
+    """
+    Calculates and returns the data freshness score for the entire dataset.
+    """
+    leads = get_all_leads(db)
+    freshness_data = calculate_data_freshness(leads)
+    return freshness_data
 
 @router.get("/persona_insights", response_model=str)
 def get_persona_insights(persona: str, db: Session = Depends(get_db)):

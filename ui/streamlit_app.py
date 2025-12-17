@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px
+from datetime import datetime
 
 # --- Configuration ---
 API_BASE_URL = "http://127.0.0.1:8000/api/v1"
@@ -24,11 +24,22 @@ def fetch_all_data():
         response.raise_for_status()
         return pd.DataFrame(response.json())
     except requests.exceptions.RequestException as e:
-        st.error(f"⚠️ Error fetching data: {e}")
+        st.error(f"⚠️ Error fetching risk profile data: {e}")
         return None
 
 @st.cache_data(ttl=30)
+def fetch_trust_metrics():
+    try:
+        response = requests.get(f"{API_BASE_URL}/analytics/data_freshness")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"⚠️ Error fetching trust metrics: {e}")
+        return {}
+
+@st.cache_data(ttl=30)
 def fetch_persona_insight(persona: str) -> str:
+    # ... (existing code, no changes needed)
     persona_map = {"Founder / Executive": "founder", "Sales Manager": "sales", "Operations / CRM Manager": "ops"}
     api_persona = persona_map.get(persona, "founder")
     try:
@@ -40,6 +51,7 @@ def fetch_persona_insight(persona: str) -> str:
 
 @st.cache_data(ttl=30)
 def fetch_alerts(persona: str) -> list:
+    # ... (existing code, no changes needed)
     persona_map = {"Founder / Executive": "founder", "Sales Manager": "sales", "Operations / CRM Manager": "ops"}
     api_persona = persona_map.get(persona, "sales")
     try:
@@ -51,6 +63,7 @@ def fetch_alerts(persona: str) -> list:
 
 # --- UI Components ---
 def render_alerts_panel(persona: str):
+    # ... (existing code, no changes needed)
     alerts = fetch_alerts(persona)
     if not alerts: return
     with st.sidebar:
@@ -63,6 +76,7 @@ def render_alerts_panel(persona: str):
                 st.markdown("---")
 
 def setup_sidebar(df):
+    # ... (existing code, no changes needed)
     with st.sidebar:
         st.header("Dashboard Controls")
         persona_options = ["Founder / Executive", "Sales Manager", "Operations / CRM Manager"]
@@ -88,11 +102,53 @@ def render_executive_summary(df, persona):
     col1.metric("Total Active Leads", total_leads)
     col2.metric("High-Risk Leads", high_risk_leads)
     col3.metric("SLA Breaches", sla_breached_count)
+    
+    render_trust_confidence_section(df) # New section
+
     st.markdown("---")
     st.subheader(f"Insights for: {persona}")
     st.info(fetch_persona_insight(persona))
 
+def render_trust_confidence_section(df):
+    st.subheader("Trust & Confidence Layer")
+    
+    trust_metrics = fetch_trust_metrics()
+    
+    # Safely calculate aggregate metrics from the dataframe
+    avg_confidence = df['confidence_score'].mean() if 'confidence_score' in df.columns else 0
+    avg_coverage = df['explainability_coverage'].mean() if 'explainability_coverage' in df.columns else 0
+    
+    col1, col2, col3 = st.columns(3)
+    
+    # Data Freshness
+    freshness_score = trust_metrics.get('freshness_score', 0)
+    last_updated_str = trust_metrics.get('last_updated_at', 'N/A')
+    if last_updated_str != 'N/A':
+        last_updated_dt = datetime.fromisoformat(last_updated_str)
+        last_updated_str = last_updated_dt.strftime('%d %b %Y, %H:%M:%S')
+
+    col1.metric(
+        "Data Freshness Score", 
+        f"{freshness_score}/100",
+        help=f"Based on the last data update at: {last_updated_str}"
+    )
+
+    # Average Confidence Level
+    col2.metric(
+        "Avg. Confidence Level",
+        f"{avg_confidence:.2f}",
+        help="Average confidence in the quality and consistency of lead data (0-1)."
+    )
+
+    # Explainability Coverage
+    col3.metric(
+        "Explainability Coverage",
+        f"{avg_coverage:.0%}",
+        help="Percentage of expected risk factors identified across all leads."
+    )
+
 def render_risk_sla_dashboard(df):
+    # ... (existing code, no changes needed)
     st.header("Risk & SLA Analysis")
     
     high_risk_df = df[df['risk_level'] == 'High'].sort_values('risk_score', ascending=False)
@@ -122,7 +178,8 @@ def render_risk_sla_dashboard(df):
         st.markdown("---")
 
     st.subheader("All Leads Data")
-    st.dataframe(df[["name", "status", "age_days", "risk_score", "risk_level", "sla_breached"]], use_container_width=True)
+    st.dataframe(df, use_container_width=True)
+
 
 # --- Main Application ---
 st.title("🏠 Property Sales Intelligence")
