@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-from app.api.v1 import lead, followup, listing, analytics, governance
+from app.api.v1 import lead, followup, listing, analytics, governance, ingestion
 from app.core.database import engine, Base
 
 # Create all tables in the database
@@ -43,6 +43,7 @@ app.include_router(followup.router, prefix="/api/v1")
 app.include_router(listing.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(governance.router, prefix="/api/v1")
+app.include_router(ingestion.router, prefix="/api/v1")
 
 @app.get("/", tags=["Root"])
 def read_root():

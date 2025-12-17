@@ -1,36 +1,59 @@
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List, Tuple
 from app.models.lead import Lead
 from app.schemas.lead import LeadCreate
 from app.services.analytics_service import process_lead_analytics
 from app.services.explainability_service import explain_lead_risk
 from app.services.trust_service import calculate_confidence_score, calculate_explainability_coverage
-from app.services.audit_log_service import log_risk_calculation, log_sla_breach_detection
 from app.core.cache import simple_cache, clear_cache
 
+def upsert_lead(db: Session, lead_in: LeadCreate) -> Tuple[Lead, str]:
+    """
+    Creates a new lead or updates an existing one based on the phone number.
+    Returns the lead object and a status string: 'inserted' or 'updated'.
+    """
+    phone = lead_in.phone
+    existing_lead = db.query(Lead).filter(Lead.phone == phone).first()
+    
+    if existing_lead:
+        # --- UPDATE (Merge) Logic ---
+        status = "updated"
+        if lead_in.source not in existing_lead.source.split(','):
+            existing_lead.source = f"{existing_lead.source},{lead_in.source}"
+        
+        if lead_in.name and not existing_lead.name: existing_lead.name = lead_in.name
+        if lead_in.email and not existing_lead.email: existing_lead.email = lead_in.email
+        if lead_in.budget and not existing_lead.budget: existing_lead.budget = lead_in.budget
+        if lead_in.notes: existing_lead.notes = f"{existing_lead.notes}\n---\n{lead_in.notes}"
+        
+        db_lead = existing_lead
+    else:
+        # --- INSERT Logic ---
+        status = "inserted"
+        db_lead = Lead(**lead_in.model_dump())
+        db.add(db_lead)
+
+    # The commit is handled by the ingestion registry per-source
+    db.flush()
+    db.refresh(db_lead)
+    clear_cache()
+    return db_lead, status
+
 def create_lead(db: Session, lead_in: LeadCreate) -> Lead:
-    """Create a new lead record and invalidate cache."""
+    """Simple lead creation. Ingestion should use upsert_lead."""
     db_lead = Lead(**lead_in.model_dump())
     db.add(db_lead)
     db.commit()
     db.refresh(db_lead)
-    clear_cache()  # Invalidate cache on new data
+    clear_cache()
     return db_lead
 
 @simple_cache(ttl=120)
 def get_all_leads(db: Session) -> List[Lead]:
-    """
-    Get all lead records, eagerly loading their follow-ups.
-    This function is cached.
-    """
     return db.query(Lead).options(joinedload(Lead.followups)).all()
 
 @simple_cache(ttl=120)
 def get_leads_with_analytics(db: Session) -> List[dict]:
-    """
-    Retrieves all leads and enriches them with calculated analytics.
-    This entire function is cached to prevent re-computation.
-    """
     leads = get_all_leads(db)
     if not leads:
         return []
@@ -42,40 +65,15 @@ def get_leads_with_analytics(db: Session) -> List[dict]:
         if lead.id in analytics_map:
             lead_analytics = analytics_map[lead.id]
             
-            # Integrate Explainability
             explanation = explain_lead_risk(lead, lead.followups)
-            lead_analytics.update({
-                "risk_factors": explanation.get("risk_factors", []),
-                "explanation_text": explanation.get("explanation_text", "No explanation available."),
-                "recommended_action": explanation.get("recommended_action", "No specific action recommended."),
-                "disclaimer": explanation.get("disclaimer")
-            })
+            lead_analytics.update(explanation)
 
-            # Integrate Trust & Confidence
             confidence = calculate_confidence_score(lead, lead_analytics)
-            coverage = calculate_explainability_coverage(lead_analytics["risk_factors"])
+            coverage = calculate_explainability_coverage(lead_analytics.get("risk_factors", []))
             lead_analytics.update({
                 "confidence_score": confidence["score"],
                 "confidence_level": confidence["level"],
                 "explainability_coverage": coverage
             })
-
-            # Audit Logging (runs even on cache hit if not separated, but acceptable for this scope)
-            # For a more advanced setup, this would be decoupled.
-            log_risk_calculation(
-                db=db,
-                lead_id=lead.id,
-                inputs={"age": lead_analytics.get("age_days", 0), "status": lead.status, "source": lead.source},
-                decision={"risk_score": lead_analytics.get("risk_score", 0), "risk_level": lead_analytics.get("risk_level", "N/A")},
-                confidence=lead_analytics.get("confidence_score", 0),
-                explanation=lead_analytics.get("explanation_text", "")
-            )
-            if lead_analytics.get("sla_breached"):
-                log_sla_breach_detection(
-                    db=db,
-                    lead_id=lead.id,
-                    inputs={"age": lead_analytics.get("age_days", 0), "status": lead.status},
-                    decision={"sla_breached": True}
-                )
 
     return list(analytics_map.values())

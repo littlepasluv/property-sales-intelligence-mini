@@ -5,35 +5,40 @@ from app.models.lead import Lead
 
 # --- Constants ---
 EXPECTED_RISK_FACTORS = ["sla_breach", "stage_stagnation", "low_engagement", "source_risk"]
+SOURCE_TRUST_SCORES = {
+    "crm": 0.9,
+    "whatsapp": 0.75,
+    "fb_ads": 0.6,
+    "manual": 0.7, # Default for older leads
+    "organic": 0.8,
+    "referral": 0.85,
+    "ads": 0.65
+}
+
 
 # --- Confidence Score Calculation ---
 
 def calculate_confidence_score(lead: Lead, analytics_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calculates a confidence score for a single lead.
-    Designed to be resilient to missing data.
+    The initial score is based on the source, then adjusted.
     """
     try:
-        score = 1.0
+        # Start with the base trust score from the source
+        base_score = SOURCE_TRUST_SCORES.get(getattr(lead, 'source', 'manual'), 0.5)
+        score = base_score
         
-        # 1. Data Completeness Penalty
-        if not getattr(lead, 'email', None): score -= 0.1
+        # Adjustments based on data completeness
+        if not getattr(lead, 'email', None): score -= 0.05
         if not getattr(lead, 'budget', None): score -= 0.1
-        if not getattr(lead, 'notes', None) or len(lead.notes) < 10: score -= 0.05
-
-        # 2. Follow-up Count Bonus/Penalty
+        
+        # Adjustments based on engagement
         followup_count = analytics_data.get("followup_count", 0)
         if followup_count > 2:
-            score += 0.15
-        elif followup_count == 0:
-            score -= 0.2
-
-        # 3. SLA Signal Consistency
-        sla_breached = analytics_data.get("sla_breached", False)
-        is_high_risk = analytics_data.get("risk_level") == "High"
-        if sla_breached and not is_high_risk:
-            score -= 0.1
-
+            score += 0.15  # High engagement increases confidence
+        elif followup_count == 0 and analytics_data.get("age_days", 0) > 7:
+            score -= 0.1 # Stale and unengaged
+            
         final_score = max(0, min(1, round(score, 2)))
 
         if final_score >= 0.8: level = "High"
@@ -45,12 +50,8 @@ def calculate_confidence_score(lead: Lead, analytics_data: Dict[str, Any]) -> Di
         logging.error(f"Error in calculate_confidence_score for lead ID {getattr(lead, 'id', 'N/A')}: {e}")
         return {"score": 0.0, "level": "Error"}
 
-# --- Explainability Coverage Calculation ---
-
+# ... (rest of the file is unchanged)
 def calculate_explainability_coverage(risk_factors: List[Dict[str, Any]]) -> float:
-    """
-    Calculates the percentage of expected risk factors that were identified.
-    """
     try:
         if not risk_factors or not isinstance(risk_factors, list):
             return 0.0
@@ -63,17 +64,11 @@ def calculate_explainability_coverage(risk_factors: List[Dict[str, Any]]) -> flo
         logging.error(f"Error in calculate_explainability_coverage: {e}")
         return 0.0
 
-# --- Data Freshness Calculation ---
-
 def calculate_data_freshness(leads: List[Lead]) -> Dict[str, Any]:
-    """
-    Calculates the data freshness score based on the most recent activity.
-    """
     try:
         if not leads:
             return {"last_updated_at": None, "freshness_score": 0, "data_status": "empty"}
 
-        # Gather all valid timestamps
         timestamps = [lead.created_at for lead in leads if lead and lead.created_at]
         for lead in leads:
             if lead and lead.followups:
