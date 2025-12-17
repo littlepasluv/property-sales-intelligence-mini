@@ -1,8 +1,10 @@
 from typing import List, Dict, Any
+from sqlalchemy.orm import Session
+from app.services.audit_log_service import log_alert_creation
 
-def generate_alerts(analytics_data: List[Dict[str, Any]], persona: str) -> List[Dict[str, Any]]:
+def generate_alerts(db: Session, analytics_data: List[Dict[str, Any]], persona: str) -> List[Dict[str, Any]]:
     """
-    Generates a list of alerts based on analytics data and persona.
+    Generates a list of alerts based on analytics data and persona, and logs the events.
     """
     alerts = []
     
@@ -75,5 +77,13 @@ def generate_alerts(analytics_data: List[Dict[str, Any]], persona: str) -> List[
             "message": messages["summary_message"],
             "action_hint": "Use the dashboard filters to explore."
         })
+
+    # Audit logging
+    log_alert_creation(
+        db=db,
+        persona=persona,
+        inputs={"lead_count": len(analytics_data), "sla_breach_count": len(sla_breached_leads)},
+        alerts=alerts
+    )
 
     return alerts

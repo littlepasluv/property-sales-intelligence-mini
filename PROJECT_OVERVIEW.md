@@ -1,170 +1,49 @@
-# Property Sales Intelligence (Mini)
+# ProSi-mini: Property Sales Intelligence
 
-## 1. Project Summary
+ProSi-mini is a lightweight, AI-driven dashboard designed to help property sales teams prioritize leads, manage risk, and improve operational efficiency. It provides real-time analytics, persona-based insights, and proactive alerts.
 
-**Property Sales Intelligence (Mini)** is a portfolio-grade, real-world Python application designed to help **individual property agents and UMKM** manage their sales workflow more efficiently.
+## Core Features
 
-The application integrates property listing management, marketing content generation, lead tracking, follow-up reminders, and performance insights into **one lightweight, low-cost system** that can run locally and scale gradually.
+1.  **Lead Management**: Central repository for leads with status tracking and follow-up history.
+2.  **Risk & SLA Analytics**:
+    *   **Risk Scoring**: Each lead is assigned a risk score (0-100) based on age, engagement, source, and SLA status.
+    *   **SLA Monitoring**: Tracks whether leads are progressing through the pipeline within predefined timeframes.
+3.  **Persona-Based Insights**: The dashboard delivers tailored summaries and recommendations for different user roles:
+    *   **Founder / Executive**: High-level overview of pipeline health, risk exposure, and strategic opportunities.
+    *   **Sales Manager**: Actionable insights on which leads to prioritize and which team members need support.
+    *   **Operations / CRM Manager**: Focus on process bottlenecks, SLA compliance, and data quality issues.
+4.  **Proactive Alerts**: A sidebar panel that flags urgent issues, such as SLA breaches or a sudden increase in high-risk leads, tailored to the user's persona.
+5.  **Trust & Confidence Layer**:
+    *   **Data Freshness**: A score (0-100) indicating how up-to-date the underlying data is.
+    *   **Confidence Score**: A lead-level score (0-1) reflecting the system's confidence in its own assessment, based on data completeness and signal consistency.
+    *   **Explainability Coverage**: A metric showing how many expected risk factors were identified for each lead, providing transparency into the AI's reasoning.
+6.  **Governance & Audit Trail**:
+    *   **Append-Only Logging**: Records all key system decisions, such as risk calculations, SLA breach detections, and insight generation, in a secure, append-only log.
+    *   **Traceability**: Provides a clear audit trail for compliance, review, and debugging. Each decision is logged with inputs, outputs, confidence scores, and a timestamp.
+    *   **Future-Ready**: The architecture includes placeholders for event hashing, enabling future integration with Web3 technologies for immutable, decentralized anchoring.
 
-This project is built as:
+## Technical Architecture
 
-* A **personal productivity tool** for real property selling
-* A **Computer Science portfolio project** demonstrating applied software engineering
-* A **potential commercial product** for other agents
+*   **Backend**: FastAPI (Python)
+*   **Database**: SQLAlchemy with SQLite (for simplicity)
+*   **Frontend**: Streamlit
+*   **Data Models**: Pydantic
 
----
+The system is designed with a modular, service-oriented architecture to ensure maintainability and scalability.
 
-## 2. Problem Statement
+## Getting Started
 
-Individual property agents commonly face these problems:
-
-* Inconsistent property posting and marketing content
-* Leads scattered across WhatsApp, forms, and social media
-* No clear prioritization between casual inquiries and serious buyers
-* Missed or late follow-ups
-* No visibility into which activities actually lead to closings
-
-Existing solutions (marketplaces, CRMs, spreadsheets) are either **too limited, too complex, or too expensive** for individual agents.
-
----
-
-## 3. Target Users (Persona)
-
-**Primary User:** Individual Property Agent / UMKM
-
-Characteristics:
-
-* Works independently or with a very small team
-* Limited technical background
-* Relies heavily on WhatsApp and social media
-* Handles multiple listings simultaneously
-
-Primary Goals:
-
-* Close deals faster
-* Stay organized without complexity
-* Focus time on serious buyers
-
----
-
-## 4. Project Goals
-
-This project is considered successful if:
-
-* It can be used daily without returning to spreadsheets
-* Leads and follow-ups are no longer missed
-* Marketing content creation becomes faster and more consistent
-* Sales performance can be understood through simple metrics
-
----
-
-## 5. MVP Scope (Strict)
-
-The MVP will focus on **exactly five core features**:
-
-1. **Property Listing Management**
-
-   * Create, update, and track property listings
-   * Manage listing status (available, booked, sold)
-
-2. **Smart Content Generator (Rule-based)**
-
-   * Generate marketing captions for Facebook Marketplace
-   * Generate WhatsApp follow-up messages
-
-3. **Lead Management (Mini CRM)**
-
-   * Capture and store leads
-   * Associate leads with specific listings
-
-4. **Follow-up Assistant**
-
-   * Track follow-up history
-   * Provide reminders for pending leads
-
-5. **Sales Performance Dashboard**
-
-   * Visualize total listings, leads, follow-ups, and closed deals
-   * New endpoint `/analytics/persona_insights` provides tailored insights for different user personas (Founder, Sales Manager, Operations Manager).
-
----
-
-## 6. Explicit Non-Goals (Out of Scope for MVP)
-
-The following features will **not** be implemented in the MVP:
-
-* Mobile application
-* Paid advertising integrations (Google Ads, Meta Ads)
-* Advanced AI or machine learning
-* Multi-language support
-* Public marketplace functionality
-
-These may be considered in future iterations.
-
----
-
-## 7. Technical Stack
-
-**Core Technologies:**
-
-* Python 3.10+
-* FastAPI (Backend API)
-* Streamlit (Web UI / Dashboard)
-* SQLite (Local database, upgradeable to MySQL)
-
-**Design Principles:**
-
-* Modular monolith architecture
-* Python-first development
-* Low operational cost
-* Local-first, cloud-ready
-
----
-
-## 8. Architecture Philosophy
-
-The system is designed as a **single integrated application** with clear module separation:
-
-* Listings
-* Content generation
-* Leads
-* Follow-ups
-* Analytics
-
-This approach ensures simplicity for solo development while remaining scalable for future multi-user support.
-
----
-
-## 9. Portfolio & Learning Objectives
-
-This project demonstrates:
-
-* Applied backend development (FastAPI)
-* Database design and data modeling
-* Automation and business logic
-* Product-oriented thinking
-* Clean project structure and documentation
-
-It is intentionally designed to be **explainable in interviews**, not just functional.
-
----
-
-## 10. Future Roadmap (Post-MVP)
-
-* Multi-user authentication
-* Export and reporting features
-* Basic lead scoring logic
-* Deployment on low-cost VPS
-* Commercial packaging for other agents
-
----
-
-## 11. Author & Context
-
-Built by a Computer Science student as a real-world application combining:
-
-* Software engineering
-* Digital marketing automation
-* Property sales workflow optimization
-
-This project prioritizes **learning, impact, and practical usability** over premature optimization.
+1.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Run the Backend API**:
+    ```bash
+    uvicorn app.main:app --reload
+    ```
+    The API will be available at `http://127.0.0.1:8000/docs`.
+3.  **Run the Frontend UI**:
+    ```bash
+    streamlit run ui/streamlit_app.py
+    ```
+    The dashboard will be accessible at `http://localhost:8501`.

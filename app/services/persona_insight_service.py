@@ -1,8 +1,10 @@
 from typing import List, Dict, Any
+from sqlalchemy.orm import Session
+from app.services.audit_log_service import log_persona_insight_generation
 
-def generate_all_persona_insights(analytics_data: List[Dict[str, Any]]) -> Dict[str, str]:
+def generate_all_persona_insights(db: Session, analytics_data: List[Dict[str, Any]]) -> Dict[str, str]:
     """
-    Generates a dictionary of formatted insight strings for all personas.
+    Generates a dictionary of formatted insight strings for all personas and logs the events.
     """
     if not analytics_data:
         return {
@@ -11,11 +13,22 @@ def generate_all_persona_insights(analytics_data: List[Dict[str, Any]]) -> Dict[
             "Operations Manager": "No lead data available to generate insights."
         }
 
-    return {
+    insights = {
         "Founder": _generate_founder_insights(analytics_data),
         "Sales Manager": _generate_sales_manager_insights(analytics_data),
         "Operations Manager": _generate_operations_manager_insights(analytics_data),
     }
+
+    # Audit logging
+    for persona, insight_text in insights.items():
+        log_persona_insight_generation(
+            db=db,
+            persona=persona,
+            inputs={"lead_count": len(analytics_data)},
+            decision={"insight": insight_text}
+        )
+
+    return insights
 
 def _generate_founder_insights(data: List[Dict[str, Any]]) -> str:
     """Generates insights for the Founder/Executive persona."""

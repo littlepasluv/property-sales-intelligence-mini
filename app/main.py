@@ -1,34 +1,23 @@
 from fastapi import FastAPI
-from app.api.v1 import lead, followup, analytics
-from app.core.database import Base, engine
+from app.api.v1 import lead, followup, listing, analytics, governance
+from app.core.database import engine, Base
 
-# Create all database tables
+# Create all tables in the database
 Base.metadata.create_all(bind=engine)
 
-# 1. Create FastAPI app instance
 app = FastAPI(
-    title="Property Sales Intelligence (Mini)",
-    description="MVP for Property Sales Intelligence",
+    title="ProSi-mini API",
+    description="A mini Property Sales Intelligence system.",
     version="0.1.0"
 )
 
-# 2. Root endpoint
-@app.get("/")
-async def root():
-    """
-    Root endpoint to verify the API is reachable.
-    """
-    return {"message": "Welcome to Property Sales Intelligence (Mini)"}
-
-# 3. Health check endpoint
-@app.get("/health")
-async def health_check():
-    """
-    Simple health check for monitoring tools.
-    """
-    return {"status": "ok"}
-
-# 4. Include routers with a consistent version prefix
+# Include API routers
 app.include_router(lead.router, prefix="/api/v1")
 app.include_router(followup.router, prefix="/api/v1")
+app.include_router(listing.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(governance.router, prefix="/api/v1")
+
+@app.get("/", tags=["Root"])
+def read_root():
+    return {"message": "Welcome to the ProSi-mini API"}

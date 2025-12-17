@@ -5,6 +5,7 @@ from app.schemas.lead import LeadCreate
 from app.services.analytics_service import process_lead_analytics
 from app.services.explainability_service import explain_lead_risk
 from app.services.trust_service import calculate_confidence_score, calculate_explainability_coverage
+from app.services.audit_log_service import log_risk_calculation, log_sla_breach_detection
 
 def create_lead(db: Session, lead_in: LeadCreate) -> Lead:
     """Create a new lead record."""
@@ -53,5 +54,22 @@ def get_leads_with_analytics(db: Session) -> List[dict]:
                 "confidence_level": confidence["level"],
                 "explainability_coverage": coverage
             })
+
+            # 4. Audit Logging
+            log_risk_calculation(
+                db=db,
+                lead_id=lead.id,
+                inputs={"age": lead_analytics["age_days"], "status": lead.status, "source": lead.source},
+                decision={"risk_score": lead_analytics["risk_score"], "risk_level": lead_analytics["risk_level"]},
+                confidence=lead_analytics["confidence_score"],
+                explanation=lead_analytics["explanation_text"]
+            )
+            if lead_analytics["sla_breached"]:
+                log_sla_breach_detection(
+                    db=db,
+                    lead_id=lead.id,
+                    inputs={"age": lead_analytics["age_days"], "status": lead.status},
+                    decision={"sla_breached": True}
+                )
 
     return list(analytics_map.values())

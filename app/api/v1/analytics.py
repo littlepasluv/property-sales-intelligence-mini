@@ -37,7 +37,7 @@ def get_persona_insights(persona: str, db: Session = Depends(get_db)):
     Generates and returns a persona-specific insight string.
     """
     analytics_data = get_leads_with_analytics(db)
-    insights = generate_all_persona_insights(analytics_data)
+    insights = generate_all_persona_insights(db, analytics_data)
     persona_map = {
         "founder": "Founder",
         "sales": "Sales Manager",
@@ -58,5 +58,5 @@ def get_alerts(persona: str, db: Session = Depends(get_db)):
     if persona_key not in ["founder", "sales", "ops"]:
         raise HTTPException(status_code=400, detail="Invalid persona specified.")
     
-    alerts = generate_alerts(analytics_data, persona_key)
+    alerts = generate_alerts(db, analytics_data, persona_key)
     return alerts
