@@ -24,21 +24,55 @@ def clear_all_caches():
 
 # --- UI Components ---
 def display_ingestion_summary():
-    if st.session_state.last_ingestion_summary:
-        summary = st.session_state.last_ingestion_summary
-        run_at_str = summary.get('run_at')
-        run_at_dt = datetime.fromisoformat(run_at_str)
+    if not st.session_state.last_ingestion_summary:
+        return
+
+    summary = st.session_state.last_ingestion_summary
+    run_at_str = summary.get('run_at')
+    run_at_dt = datetime.fromisoformat(run_at_str)
+    
+    st.sidebar.subheader(f"Last Ingestion: {run_at_dt.strftime('%H:%M:%S')}")
+
+    # --- Overall Health Summary ---
+    source_statuses = []
+    for source, results in summary.get('sources', {}).items():
+        inserted = results.get('inserted', 0)
+        updated = results.get('updated', 0)
+        failed = results.get('failed', 0)
         
-        st.sidebar.subheader(f"Last Ingestion: {run_at_dt.strftime('%H:%M:%S')}")
+        if failed > 0 and (inserted == 0 and updated == 0):
+            source_statuses.append("failed")
+        elif failed > 0:
+            source_statuses.append("partial")
+        else:
+            source_statuses.append("success")
+
+    if "failed" in source_statuses:
+        st.sidebar.error("🔴 Ingestion failed for one or more sources.")
+    elif "partial" in source_statuses:
+        st.sidebar.warning("🟡 Ingestion partially succeeded.")
+    else:
+        st.sidebar.success("🟢 All sources ingested successfully.")
+
+    # --- Per-Source Cards ---
+    for source, results in summary.get('sources', {}).items():
+        inserted = results.get('inserted', 0)
+        updated = results.get('updated', 0)
+        failed = results.get('failed', 0)
         
-        for source, results in summary.get('sources', {}).items():
-            status_icon = "✅" if results['status'].startswith('success') else "❌"
-            with st.sidebar.expander(f"{status_icon} {source.upper()}", expanded=False):
-                st.metric("Inserted", results.get('inserted', 0))
-                st.metric("Updated", results.get('updated', 0))
-                st.metric("Skipped", results.get('skipped', 0))
-                if results.get('failed', 0) > 0:
-                    st.metric("Failed", results.get('failed', 0))
+        if failed == 0:
+            status, icon = "SUCCESS", "🟢"
+        elif failed > 0 and (inserted > 0 or updated > 0):
+            status, icon = "PARTIAL", "🟡"
+        else:
+            status, icon = "FAILED", "🔴"
+            
+        with st.sidebar.container(border=True):
+            st.markdown(f"**{icon} {source.upper()}** - {status}")
+            col1, col2, col3 = st.columns(3)
+            col1.markdown(f"**{inserted}** Inserted")
+            col2.markdown(f"{updated} Updated")
+            col3.markdown(f"**{failed}** Failed")
 
 def setup_sidebar():
     with st.sidebar:
@@ -76,8 +110,6 @@ def render_main_dashboard_page():
     
     # Fetch data
     master_df = pd.DataFrame() # Placeholder
-    
-    # The call to setup_sidebar() is removed from here
     
     # ... (rest of dashboard rendering logic)
 
