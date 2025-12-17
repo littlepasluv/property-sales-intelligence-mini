@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-
 from app.models.lead import Lead
 from app.schemas.lead import LeadCreate
 from app.services.analytics_service import process_lead_analytics
+from app.services.explainability_service import explain_lead_risk
 
 def create_lead(db: Session, lead_in: LeadCreate) -> Lead:
     """Create a new lead record."""
@@ -22,8 +22,26 @@ def get_all_leads(db: Session) -> List[Lead]:
 
 def get_leads_with_analytics(db: Session) -> List[dict]:
     """
-    Retrieves all leads and enriches them with calculated
-    analytics fields like SLA status and risk score.
+    Retrieves all leads and enriches them with calculated analytics,
+    including risk scores and their explanations.
     """
     leads = get_all_leads(db)
-    return process_lead_analytics(leads)
+    analytics_data = process_lead_analytics(leads)
+
+    # Create a map for quick lookup
+    analytics_map = {data['id']: data for data in analytics_data}
+
+    # Integrate explainability for each lead
+    for lead in leads:
+        if lead.id in analytics_map:
+            explanation = explain_lead_risk(lead, lead.followups)
+            
+            # Flatten the explanation dictionary into the analytics data
+            analytics_map[lead.id].update({
+                "risk_factors": explanation.get("risk_factors", []),
+                "explanation_text": explanation.get("explanation_text", "No explanation available."),
+                "recommended_action": explanation.get("recommended_action", "No specific action recommended."),
+                "disclaimer": explanation.get("disclaimer")
+            })
+
+    return list(analytics_map.values())

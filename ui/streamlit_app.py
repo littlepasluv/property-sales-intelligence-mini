@@ -16,26 +16,20 @@ st.set_page_config(
 if 'persona' not in st.session_state:
     st.session_state.persona = 'Founder / Executive'
 
-# --- Data Fetching (Cached) ---
+# --- Data Fetching ---
 @st.cache_data(ttl=30)
 def fetch_all_data():
-    """Fetches lead and risk profile data."""
     try:
-        risk_response = requests.get(f"{API_BASE_URL}/analytics/risk_profile")
-        risk_response.raise_for_status()
-        return pd.DataFrame(risk_response.json())
+        response = requests.get(f"{API_BASE_URL}/analytics/risk_profile")
+        response.raise_for_status()
+        return pd.DataFrame(response.json())
     except requests.exceptions.RequestException as e:
-        st.error(f"⚠️ Error fetching dashboard data: {e}")
+        st.error(f"⚠️ Error fetching data: {e}")
         return None
 
 @st.cache_data(ttl=30)
 def fetch_persona_insight(persona: str) -> str:
-    """Fetches formatted insights for a specific persona."""
-    persona_map = {
-        "Founder / Executive": "founder",
-        "Sales Manager": "sales",
-        "Operations / CRM Manager": "ops"
-    }
+    persona_map = {"Founder / Executive": "founder", "Sales Manager": "sales", "Operations / CRM Manager": "ops"}
     api_persona = persona_map.get(persona, "founder")
     try:
         response = requests.get(f"{API_BASE_URL}/analytics/persona_insights?persona={api_persona}")
@@ -46,12 +40,7 @@ def fetch_persona_insight(persona: str) -> str:
 
 @st.cache_data(ttl=30)
 def fetch_alerts(persona: str) -> list:
-    """Fetches proactive alerts for a specific persona."""
-    persona_map = {
-        "Founder / Executive": "founder",
-        "Sales Manager": "sales",
-        "Operations / CRM Manager": "ops"
-    }
+    persona_map = {"Founder / Executive": "founder", "Sales Manager": "sales", "Operations / CRM Manager": "ops"}
     api_persona = persona_map.get(persona, "sales")
     try:
         response = requests.get(f"{API_BASE_URL}/analytics/alerts?persona={api_persona}")
@@ -62,72 +51,81 @@ def fetch_alerts(persona: str) -> list:
 
 # --- UI Components ---
 def render_alerts_panel(persona: str):
-    """Renders the alerts and notifications panel in the sidebar."""
     alerts = fetch_alerts(persona)
-    if not alerts:
-        return
-
+    if not alerts: return
     with st.sidebar:
         with st.expander("🚨 Alerts & Notifications", expanded=True):
             for alert in sorted(alerts, key=lambda x: x['severity'], reverse=True):
-                icon = alert.get('icon', '⚠️')
-                st.markdown(f"**{icon} {alert['title']}**")
+                st.markdown(f"**{alert.get('icon', '⚠️')} {alert['title']}**")
                 st.caption(alert['message'])
                 if 'action_hint' in alert:
                     st.markdown(f"<small>_Action: {alert['action_hint']}_</small>", unsafe_allow_html=True)
                 st.markdown("---")
 
 def setup_sidebar(df):
-    """Sets up the sidebar with controls and filters."""
     with st.sidebar:
         st.header("Dashboard Controls")
         persona_options = ["Founder / Executive", "Sales Manager", "Operations / CRM Manager"]
         st.session_state.persona = st.radio("View as", persona_options, key="persona_selector")
-        
-        st.markdown("---")
         if st.button("🔄 Refresh Data"):
             st.cache_data.clear()
             st.rerun()
     
-    render_alerts_panel(st.session_state.persona) # Render alerts after persona is set
+    render_alerts_panel(st.session_state.persona)
 
     with st.sidebar:
         st.header("Filters")
         status_options = ["All"] + df['status'].unique().tolist()
         status_filter = st.selectbox("Filter by Status", status_options)
-
         risk_options = ["All"] + df['risk_level'].unique().tolist()
         risk_filter = st.selectbox("Filter by Risk Level", risk_options)
-
     return status_filter, risk_filter
 
 def render_executive_summary(df, persona):
-    """Renders the high-level executive summary view."""
     st.header("Executive Snapshot")
-    
-    total_leads = len(df)
-    high_risk_leads = len(df[df['risk_level'] == 'High'])
-    sla_breached_count = df['sla_breached'].sum()
-    
+    total_leads, high_risk_leads, sla_breached_count = len(df), len(df[df['risk_level'] == 'High']), df['sla_breached'].sum()
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Active Leads", total_leads)
     col2.metric("High-Risk Leads", high_risk_leads)
     col3.metric("SLA Breaches", sla_breached_count)
-
     st.markdown("---")
-    
     st.subheader(f"Insights for: {persona}")
-    insight_text = fetch_persona_insight(persona)
-    st.info(insight_text)
+    st.info(fetch_persona_insight(persona))
 
 def render_risk_sla_dashboard(df):
-    """Renders the risk and SLA breach analysis view."""
     st.header("Risk & SLA Analysis")
+    
+    high_risk_df = df[df['risk_level'] == 'High'].sort_values('risk_score', ascending=False)
+
+    for index, row in high_risk_df.iterrows():
+        st.markdown(f"#### {row['name']} (Risk Score: {row['risk_score']})")
+        
+        with st.expander("**Why is this lead high risk?**"):
+            # Defensively access explanation fields
+            summary = row.get('explanation_text', 'No summary available.')
+            risk_factors = row.get('risk_factors', [])
+            recommended_action = row.get('recommended_action', 'No action recommended.')
+            disclaimer = row.get('disclaimer')
+
+            st.markdown(f"**Summary:** *{summary}*")
+            
+            if risk_factors:
+                st.markdown("**Risk Factors:**")
+                for factor in risk_factors:
+                    st.markdown(f"- **{factor.get('type', 'N/A').replace('_', ' ').title()}** ({factor.get('weight', 0)}%): {factor.get('detail', 'N/A')}")
+            
+            st.markdown("**Recommended Action:**")
+            st.success(f"➡️ {recommended_action}")
+
+            if disclaimer:
+                st.warning(f"*{disclaimer}*")
+        st.markdown("---")
+
+    st.subheader("All Leads Data")
     st.dataframe(df[["name", "status", "age_days", "risk_score", "risk_level", "sla_breached"]], use_container_width=True)
 
 # --- Main Application ---
 st.title("🏠 Property Sales Intelligence")
-
 master_df = fetch_all_data()
 
 if master_df is not None and not master_df.empty:
