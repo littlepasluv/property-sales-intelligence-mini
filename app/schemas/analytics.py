@@ -1,26 +1,32 @@
 from pydantic import BaseModel, Field
-from typing import Dict
+from typing import Dict, List
 
 class LeadAnalytics(BaseModel):
-    """
-    Analytics data for Leads.
-    Provides a high-level overview of lead volume and pipeline status.
-    """
-    total_leads: int = Field(..., description="Total number of leads in the system")
-    by_status: Dict[str, int] = Field(..., description="Breakdown of leads by their current status (e.g., new, contacted)")
+    # ... (existing code)
+    pass
 
 class FollowupAnalytics(BaseModel):
-    """
-    Analytics data for Follow-ups.
-    Tracks agent activity and interaction outcomes.
-    """
-    total_followups: int = Field(..., description="Total number of follow-up interactions recorded")
-    by_status: Dict[str, int] = Field(..., description="Breakdown of follow-ups by their status (e.g., pending, closed)")
+    # ... (existing code)
+    pass
 
 class DashboardAnalytics(BaseModel):
+    # ... (existing code)
+    pass
+
+# --- Confidence Drivers Schemas ---
+
+class ConfidenceDriver(BaseModel):
     """
-    Main Dashboard Analytics Schema.
-    Aggregates all key metrics into a single response for the frontend dashboard.
+    Represents a single factor contributing to the overall confidence score.
     """
-    leads: LeadAnalytics
-    followups: FollowupAnalytics
+    name: str
+    status: str  # e.g., "CRITICAL", "WARNING", "GOOD"
+    score: float
+    message: str
+
+class ConfidenceDriversResponse(BaseModel):
+    """
+    The response model for the confidence drivers endpoint.
+    """
+    overall_confidence: str
+    drivers: List[ConfidenceDriver]

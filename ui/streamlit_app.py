@@ -12,14 +12,6 @@ DEV_MODE_BYPASS_AUTH = True
 
 st.set_page_config(page_title="Property Sales Intelligence", page_icon="🏠", layout="wide")
 
-def map_persona_to_role(persona: str) -> str:
-    """Maps the selected persona to a user role string."""
-    return {
-        "Founder / Executive": "founder",
-        "Sales Manager": "sales_manager",
-        "Operations / CRM Manager": "ops_crm",
-    }.get(persona, "founder")
-
 def initialize_session_state():
     """Initializes session state for authentication and navigation."""
     defaults = {
@@ -34,16 +26,11 @@ def initialize_session_state():
         if key not in st.session_state:
             st.session_state[key] = value
             
-    # --- DEV AUTH BYPASS – REMOVE BEFORE PRODUCTION ---
     if DEV_MODE_BYPASS_AUTH:
         st.session_state.is_authenticated = True
         st.session_state.access_token = "dev-token-do-not-use-in-prod"
-        # You can change the default role for testing different personas
         st.session_state.user_role = "founder" 
-    # --- END DEV AUTH BYPASS ---
 
-
-# --- API Calls ---
 def api_request(method, endpoint, **kwargs):
     """Centralized function for making authenticated API requests."""
     headers = kwargs.pop("headers", {})
@@ -57,84 +44,67 @@ def api_request(method, endpoint, **kwargs):
         response = requests.request(method, url, headers=headers, **kwargs)
         response.raise_for_status()
         return response.json() if response.content else None
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403: st.error("🚫 Access Denied.")
-        elif e.response.status_code == 401:
-             st.error("🚫 Authentication failed.")
-             handle_logout()
-        else: st.error(f"API Error: {e.response.status_code}")
-        return None
     except requests.exceptions.RequestException:
         st.error("Failed to connect to the API.")
         return None
 
-def handle_login():
-    # This function is now bypassed in DEV_MODE
-    pass
-
-def handle_logout():
-    # This function is now bypassed in DEV_MODE
-    pass
-
-# --- UI Components ---
 def display_trust_confidence():
-    """Fetches and displays the Trust & Confidence score on the dashboard."""
+    """
+    Fetches and displays the Trust & Confidence score, with an
+    expandable explanation and guidance section.
+    """
     st.header("Trust & Confidence")
     confidence_data = api_request("get", "analytics/confidence")
 
     if confidence_data is None:
-        st.warning("Could not retrieve confidence score. Some metrics may be unavailable.")
+        st.warning("Could not retrieve confidence score.")
         return
 
-    level = confidence_data.get("confidence_level", "Unknown")
-    score = confidence_data.get("confidence_score", 0)
-    signals = confidence_data.get("signals", [])
-
-    color_map = {"High": "green", "Medium": "orange", "Low": "red"}
+    level = confidence_data.get("level", "Unknown")
+    score = confidence_data.get("score", 0)
+    guidance = confidence_data.get("decision_guidance", "Guidance unavailable.")
     
-    if level == "Low":
-        st.warning(f"**Low System Confidence ({score}%)**: Data quality or freshness is poor. Insights may be unreliable.", icon="⚠️")
+    icon_map = {"HIGH": "✅", "MEDIUM": "⚠️", "LOW": "⛔️"}
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric(label="Confidence Level", value=level, delta=f"{score}%", delta_color="off")
-        st.markdown(f"<span style='color:{color_map.get(level, 'grey')}; font-size: 1.2em;'>●</span> {level}", unsafe_allow_html=True)
+    st.metric(label="Confidence Level", value=level, delta=f"{score}%", delta_color="off")
+    st.write(f"**{icon_map.get(level, '⚪️')} {guidance}**")
 
-    with col2:
-        with st.expander("View Confidence Signals"):
-            if signals:
-                for signal in signals:
-                    st.markdown(f"- {signal}")
-            else:
-                st.info("No specific signals available.")
+    with st.expander("Why am I seeing this?"):
+        summary = confidence_data.get("explanation_summary")
+        details = confidence_data.get("explanation_details", [])
+
+        if summary:
+            st.markdown(f"**Summary:** {summary}")
+            st.markdown("---")
+        
+        if details:
+            st.markdown("**Key Drivers:**")
+            for bullet in details:
+                st.markdown(f"- {bullet}")
+        elif not summary:
+            st.info("Detailed explanation is currently unavailable.")
+
+def render_navigation():
+    PAGES = {"Dashboard": "📊", "Governance & Audit": "⚖️", "Ingestion": "📥"}
+    visible_pages = list(PAGES.keys())
+
+    if st.session_state.user_role != "founder":
+        if "Governance & Audit" in visible_pages: visible_pages.remove("Governance & Audit")
+    if st.session_state.user_role != "ops_crm":
+        if "Ingestion" in visible_pages: visible_pages.remove("Ingestion")
+    for page in visible_pages:
+        if st.sidebar.button(f"{PAGES[page]} {page}", use_container_width=True):
+            st.session_state.active_page = page
+            st.rerun()
 
 def setup_sidebar():
     st.sidebar.title("ProSi-mini")
-    
-    # --- DEV AUTH BYPASS – REMOVE BEFORE PRODUCTION ---
     if DEV_MODE_BYPASS_AUTH:
         st.sidebar.warning("Auth Bypassed (DEV)")
         st.sidebar.info(f"Role: **{st.session_state.user_role.replace('_', ' ').title()}**")
         st.sidebar.markdown("---")
         render_navigation()
-        return
-    # --- END DEV AUTH BYPASS ---
 
-    if not st.session_state.is_authenticated:
-        st.sidebar.header("Login")
-        st.sidebar.selectbox("Select Your Persona", ["Founder / Executive", "Sales Manager", "Operations / CRM Manager"], key="persona")
-        st.sidebar.button("Login", on_click=handle_login, use_container_width=True)
-    else:
-        st.sidebar.success(f"Logged in as: **{st.session_state.user_role.replace('_', ' ').title()}**")
-        st.sidebar.button("Logout", on_click=handle_logout, use_container_width=True)
-        st.sidebar.markdown("---")
-        render_navigation()
-
-def render_navigation():
-    # ... (existing code remains the same)
-    pass
-
-# --- Main Application ---
 def main():
     initialize_session_state()
     setup_sidebar()
@@ -143,14 +113,12 @@ def main():
         if st.session_state.active_page == "Dashboard":
             st.title("📊 Main Dashboard")
             display_trust_confidence()
-            st.markdown("---")
-            st.write("Other dashboard components will go here.")
         elif st.session_state.active_page == "Governance & Audit":
             st.title("⚖️ Governance & Audit")
         elif st.session_state.active_page == "Ingestion":
             st.title("📥 Data Ingestion")
     else:
-        st.info("Please log in using the sidebar to continue.")
+        st.info("Please log in to continue.")
 
 if __name__ == "__main__":
     main()
