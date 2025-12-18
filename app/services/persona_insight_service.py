@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from app.services.audit_log_service import log_persona_insight_generation
+from app.services.audit_log_service import create_audit_log_entry
+from app.schemas.audit_log import AuditLogCreate
 from app.core.cache import simple_cache
 from app.services.insight_quality_service import calculate_insight_quality
 
@@ -28,13 +29,13 @@ def generate_all_persona_insights(db: Session, analytics_data: List[Dict[str, An
 
     # Audit logging with quality score
     for persona, insight_text in insights.items():
-        log_persona_insight_generation(
-            db=db,
+        log_entry = AuditLogCreate(
+            event_type="persona_insight_generation",
             persona=persona,
-            inputs={"lead_count": len(analytics_data)},
-            decision={"insight": insight_text},
-            confidence=quality_report.get("score")
+            details=f"Generated insight with confidence: {quality_report.get('score', 'N/A'):.2f}",
+            decision=insight_text[:255] # Truncate for decision field
         )
+        create_audit_log_entry(db=db, event=log_entry)
 
     return insights
 

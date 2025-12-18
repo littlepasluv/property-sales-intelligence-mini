@@ -3,10 +3,11 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.v1 import lead, followup, listing, analytics, governance, ingestion, system, health, alerts
+from app.api.v1 import lead, followup, listing, analytics, governance, ingestion, system, health, alerts, auth
 from app.core.database import engine, Base, get_db
-from app.services.audit_log_service import create_audit_log
+from app.services.audit_log_service import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
+from app.core.security import get_current_user, UserContext
 
 # Create all tables in the database
 Base.metadata.create_all(bind=engine)
@@ -21,15 +22,22 @@ app = FastAPI(
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 403:
-        # Use a separate DB session for logging
         db: Session = next(get_db())
-        role = request.headers.get("X-User-Role", "unknown")
-        log_entry = AuditLogCreate(
-            event_type="access_denied",
-            details=f"Role '{role}' denied access to {request.method} {request.url.path}",
-            persona=role
-        )
-        create_audit_log(db, log_entry)
+        
+        # Try to get user context to see if it was a JWT-based denial
+        user_context: UserContext = await get_current_user(request, request.headers.get("authorization"))
+
+        if user_context:
+            details = f"User '{user_context.user_id}' with role '{user_context.role.value}' denied access to {request.method} {request.url.path} (source: {user_context.source})"
+            persona = user_context.role.value
+        else:
+            # Fallback to header if no valid JWT context
+            role = request.headers.get("X-User-Role", "unknown")
+            details = f"Role '{role}' denied access to {request.method} {request.url.path} (source: header)"
+            persona = role
+
+        log_entry = AuditLogCreate(event_type="access_denied", details=details, persona=persona)
+        create_audit_log_entry(db, log_entry)
         db.close()
 
     return JSONResponse(
@@ -39,14 +47,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    # For now, we just return a generic 500 error
-    # In production, you'd want to log this exception to a file or monitoring service
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred."},
     )
 
 # Include API routers
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(lead.router, prefix="/api/v1")
 app.include_router(followup.router, prefix="/api/v1")
 app.include_router(listing.router, prefix="/api/v1")

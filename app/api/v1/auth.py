@@ -7,7 +7,7 @@ from app.schemas.auth import LoginRequest, TokenResponse
 from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_HOURS
 from app.core.security import UserRole
 from app.core.database import get_db
-from app.services.audit_log_service import create_audit_log
+from app.services.audit_log_service import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -54,7 +54,7 @@ def login_for_access_token(
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     
     # Audit the login event
-    create_audit_log(db, AuditLogCreate(
+    create_audit_log_entry(db, AuditLogCreate(
         event_type="user_login",
         details=f"User '{user_id}' logged in with role '{role.value}'.",
         persona=role.value

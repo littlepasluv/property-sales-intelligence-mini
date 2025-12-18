@@ -54,3 +54,6 @@ urllib3==2.6.2
 uvicorn==0.38.0
 plotly
 Faker
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
