@@ -19,3 +19,7 @@ class DecisionProposal(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     decided_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # New columns for review
+    reviewed_by = Column(String, nullable=True)
+    review_note = Column(Text, nullable=True)
