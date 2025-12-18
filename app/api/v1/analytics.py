@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import logging
 
 from app.core.database import get_db
-from app.schemas.audit_log import AuditLogCreate
 from app.schemas.confidence import ConfidenceScore, ConfidenceSignal
+from app.schemas.audit_log import AuditLogCreate
 from app.services.confidence_service import get_system_confidence
 from app.services.audit_log_service import create_audit_log_entry
-from app.core.security import get_current_user_role, UserRole
+from app.core.security import UserRole, require_roles, get_current_user_role
 
 router = APIRouter(
     prefix="/analytics",
-    tags=["Analytics"]
+    tags=["Analytics"],
+    dependencies=[Depends(require_roles([UserRole.FOUNDER, UserRole.SALES_MANAGER, UserRole.OPS_CRM, UserRole.VIEWER]))]
 )
 
 @router.get("/confidence", response_model=ConfidenceScore)
@@ -21,13 +22,11 @@ def get_confidence_endpoint(
     role: UserRole = Depends(get_current_user_role)
 ):
     """
-    Calculates and returns the system's overall confidence score,
-    including the level, score, and explainable signals (drivers).
+    Calculates and returns the system's overall confidence score.
     """
     try:
         confidence_data = get_system_confidence(db)
         
-        # --- UPDATED AUDIT LOG ---
         log_details = (
             f"Score: {confidence_data.score}. "
             f"Guidance: '{confidence_data.decision_guidance}'. "
