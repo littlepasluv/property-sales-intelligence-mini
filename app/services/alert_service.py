@@ -1,67 +1,94 @@
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
-from sqlalchemy.orm import Session
-from app.services.audit_log_service import log_alert_creation
-from app.core.cache import simple_cache
 
-@simple_cache(ttl=300)
-def generate_alerts(db: Session, analytics_data: List[Dict[str, Any]], persona: str) -> List[Dict[str, Any]]:
+# 1. Centralized Alert Rule Configuration
+ALERT_RULES = {
+    "ingestion_failure": {
+        "threshold": 0, # Any failure triggers this
+        "severity": "high",
+        "message": "Ingestion failed for source: {source_name}",
+        "check": lambda state: any(s.get("status") == "failure" for s in state.get("ingestion_status", {}).get("sources", {}).values())
+    },
+    "low_data_completeness": {
+        "threshold": 70.0, # Percent
+        "severity": "medium",
+        "message": "Average data completeness is {actual:.1f}%, below the {threshold:.0f}% target.",
+        "check": lambda state: state.get("data_quality", {}).get("avg_completeness", 100) < ALERT_RULES["low_data_completeness"]["threshold"]
+    },
+    "stale_data": {
+        "threshold_minutes": 120,
+        "severity": "medium",
+        "message": "Data is stale. Last ingestion was {actual:.0f} minutes ago (threshold: {threshold} min).",
+        "check": lambda state: state.get("data_freshness", {}).get("last_updated_at") and (datetime.now(timezone.utc) - datetime.fromisoformat(state["data_freshness"]["last_updated_at"])).total_seconds() / 60 > ALERT_RULES["stale_data"]["threshold_minutes"]
+    },
+    "low_insight_confidence": {
+        "threshold": 50, # Score
+        "severity": "low",
+        "message": "Insight confidence score is {actual}, below the recommended level of {threshold}.",
+        "check": lambda state: state.get("insight_quality", {}).get("score", 100) < ALERT_RULES["low_insight_confidence"]["threshold"]
+    }
+}
+
+# 2. Backend Alert Evaluation Engine
+def evaluate_alerts(
+    ingestion_status: Dict, 
+    data_quality: Dict, 
+    data_freshness: Dict, 
+    insight_quality: Dict
+) -> List[Dict[str, Any]]:
     """
-    Generates a list of alerts based on analytics data and persona, and logs the events.
-    This function is cached.
+    Evaluates all defined alert rules against the current system state.
     """
-    alerts = []
+    active_alerts = []
     
-    if not analytics_data:
-        return alerts
-
-    sla_breached_leads = [d for d in analytics_data if d.get('sla_breached')]
-    high_risk_leads = [d for d in analytics_data if d.get('risk_level') == 'High' and not d.get('sla_breached')]
-    
-    try:
-        oldest_unattended = max(analytics_data, key=lambda x: x.get('age_days', 0))
-    except (ValueError, TypeError):
-        oldest_unattended = {"age_days": "N/A", "name": "N/A"}
-
-
-    # Persona-Aware Messaging
-    persona_map = {
-        "founder": {
-            "sla_title": "SLA Breaches Impacting Reputation",
-            "sla_message": f"{len(sla_breached_leads)} leads have breached SLA, posing a risk to client trust.",
-            "risk_title": "High-Risk Leads Signal Pipeline Weakness",
-            "risk_message": f"{len(high_risk_leads)} leads are high-risk, indicating potential revenue loss.",
-            "summary_title": "Daily Strategic Summary",
-            "summary_message": f"Attention: {len(high_risk_leads)} high-risk leads and {len(sla_breached_leads)} SLA breaches require review. Oldest unattended lead is {oldest_unattended.get('age_days')} days old."
-        },
-        "sales": {
-            "sla_title": "Urgent: Follow Up on Breached Leads",
-            "sla_message": f"{len(sla_breached_leads)} leads need immediate follow-up. Start with: {', '.join([l.get('name', 'N/A') for l in sla_breached_leads[:2]])}.",
-            "risk_title": "High-Risk Leads to Prioritize",
-            "risk_message": f"Focus on these {len(high_risk_leads)} high-risk leads to keep the pipeline moving.",
-            "summary_title": "Your Daily Action Summary",
-            "summary_message": f"Today's focus: {len(high_risk_leads)} high-risk leads and {len(sla_breached_leads)} urgent SLA breaches. Oldest unattended lead: {oldest_unattended.get('name')} ({oldest_unattended.get('age_days')} days)."
-        },
-        "ops": {
-            "sla_title": "Process Alert: SLA Compliance Failure",
-            "sla_message": f"Process failure: {len(sla_breached_leads)} leads have breached SLA in stages: {', '.join(set([l.get('status', 'N/A') for l in sla_breached_leads]))}.",
-            "risk_title": "High-Risk Leads Analysis",
-            "risk_message": f"{len(high_risk_leads)} leads are high-risk. Investigate if this is due to process delays.",
-            "summary_title": "Daily Operational Health Check",
-            "summary_message": f"System status: {len(high_risk_leads)} high-risk leads, {len(sla_breached_leads)} SLA breaches. Oldest unattended lead is {oldest_unattended.get('age_days')} days old."
-        }
+    system_state = {
+        "ingestion_status": ingestion_status,
+        "data_quality": data_quality,
+        "data_freshness": data_freshness,
+        "insight_quality": insight_quality
     }
 
-    messages = persona_map.get(persona, persona_map["sales"])
+    # Ingestion Failure Check
+    if ALERT_RULES["ingestion_failure"]["check"](system_state):
+        for source, results in ingestion_status.get("sources", {}).items():
+            if results.get("status") == "failure":
+                active_alerts.append({
+                    "type": "ingestion_failure",
+                    "severity": ALERT_RULES["ingestion_failure"]["severity"],
+                    "message": ALERT_RULES["ingestion_failure"]["message"].format(source_name=source.upper()),
+                    "detected_at": datetime.now(timezone.utc).isoformat()
+                })
 
-    # Alert Generation
-    if sla_breached_leads:
-        alerts.append({"type": "sla_breach", "severity": "high", "icon": "⏰", "title": messages["sla_title"], "message": messages["sla_message"]})
-    if high_risk_leads:
-        alerts.append({"type": "high_risk", "severity": "medium", "icon": "⚠️", "title": messages["risk_title"], "message": messages["risk_message"]})
-    if analytics_data:
-        alerts.append({"type": "summary", "severity": "low", "icon": "🔥", "title": messages["summary_title"], "message": messages["summary_message"]})
+    # Data Completeness Check
+    if ALERT_RULES["low_data_completeness"]["check"](system_state):
+        actual = data_quality.get("avg_completeness", 0)
+        active_alerts.append({
+            "type": "low_data_completeness",
+            "severity": ALERT_RULES["low_data_completeness"]["severity"],
+            "message": ALERT_RULES["low_data_completeness"]["message"].format(actual=actual, threshold=ALERT_RULES["low_data_completeness"]["threshold"]),
+            "detected_at": datetime.now(timezone.utc).isoformat()
+        })
 
-    # Audit logging
-    log_alert_creation(db=db, persona=persona, inputs={"lead_count": len(analytics_data)}, alerts=alerts)
+    # Stale Data Check
+    if ALERT_RULES["stale_data"]["check"](system_state):
+        last_updated_at = data_freshness.get("last_updated_at")
+        if last_updated_at:
+            actual = (datetime.now(timezone.utc) - datetime.fromisoformat(last_updated_at)).total_seconds() / 60
+            active_alerts.append({
+                "type": "stale_data",
+                "severity": ALERT_RULES["stale_data"]["severity"],
+                "message": ALERT_RULES["stale_data"]["message"].format(actual=actual, threshold=ALERT_RULES["stale_data"]["threshold_minutes"]),
+                "detected_at": datetime.now(timezone.utc).isoformat()
+            })
+        
+    # Low Insight Confidence Check
+    if ALERT_RULES["low_insight_confidence"]["check"](system_state):
+        actual = insight_quality.get("score", 0)
+        active_alerts.append({
+            "type": "low_insight_confidence",
+            "severity": ALERT_RULES["low_insight_confidence"]["severity"],
+            "message": ALERT_RULES["low_insight_confidence"]["message"].format(actual=actual, threshold=ALERT_RULES["low_insight_confidence"]["threshold"]),
+            "detected_at": datetime.now(timezone.utc).isoformat()
+        })
 
-    return alerts
+    return active_alerts

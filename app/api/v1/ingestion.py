@@ -1,14 +1,19 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Dict
 
 from app.ingestion.registry import registry
+from app.core.security import require_roles, UserRole
 
 router = APIRouter(
     prefix="/ingestion",
     tags=["Ingestion"]
 )
 
-@router.post("/run", status_code=status.HTTP_200_OK)
+@router.post(
+    "/run",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_roles([UserRole.OPS_CRM]))]
+)
 def run_ingestion() -> Dict:
     """
     Triggers the data ingestion process for all enabled sources and

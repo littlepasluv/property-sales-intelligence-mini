@@ -7,10 +7,12 @@ from app.core.database import get_db
 from app.schemas.audit_log import AuditLog
 from app.services.audit_log_service import get_audit_logs
 from app.core.cache import clear_cache
+from app.core.security import require_roles, UserRole
 
 router = APIRouter(
     prefix="/governance",
-    tags=["Governance"]
+    tags=["Governance"],
+    dependencies=[Depends(require_roles([UserRole.FOUNDER]))]
 )
 
 @router.get("/audit_logs", response_model=List[AuditLog])

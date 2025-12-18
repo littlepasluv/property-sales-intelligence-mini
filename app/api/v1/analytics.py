@@ -6,7 +6,6 @@ from app.core.database import get_db
 from app.schemas.lead import LeadAnalytics
 from app.services.lead_service import get_leads_with_analytics, get_all_leads
 from app.services.persona_insight_service import generate_all_persona_insights
-from app.services.alert_service import generate_alerts
 from app.services.trust_service import calculate_data_freshness
 from app.services.data_quality_service import analyze_data_quality
 from app.services.insight_quality_service import calculate_insight_quality
@@ -57,8 +56,3 @@ def get_persona_insights(persona: str, db: Session = Depends(get_db)):
     if not insight_key or insight_key not in insights:
         raise HTTPException(status_code=404, detail=f"Persona '{persona}' not found.")
     return insights[insight_key]
-
-@router.get("/alerts", response_model=List[Dict[str, Any]])
-def get_alerts(persona: str, db: Session = Depends(get_db)):
-    # ... (existing code)
-    pass
