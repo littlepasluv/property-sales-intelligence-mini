@@ -3,6 +3,7 @@ from app.schemas.decision import DecisionRecommendation, RecommendationPriority,
 from app.schemas.rule_result import RuleResult
 from app.core.security import UserRole
 
+# --- Persona Weighting Configuration ---
 PERSONA_WEIGHTS = {
     UserRole.FOUNDER: 1.3,
     UserRole.SALES_MANAGER: 1.1,
@@ -16,7 +17,7 @@ def check_confidence_threshold(confidence_score: float) -> RuleResult:
         rule_id="CONFIDENCE_CHECK",
         passed=passed,
         weight=0.5,
-        explanation=f"System confidence is {confidence_score}%, which is {'above' if passed else 'below'} the 60% threshold."
+        explanation=f"System confidence score is {confidence_score}%, which is {'above' if passed else 'below'} the 60% minimum threshold."
     )
 
 def check_policy_violation(metrics: Dict[str, Any]) -> RuleResult:
@@ -25,7 +26,7 @@ def check_policy_violation(metrics: Dict[str, Any]) -> RuleResult:
         rule_id="POLICY_VIOLATION_CHECK",
         passed=not violation,
         weight=0.3,
-        explanation=f"Data duplication rate is {metrics.get('duplicate_rate', 0)}%, which {'does not violate' if not violation else 'violates'} the policy."
+        explanation=f"Data duplication rate is {metrics.get('duplicate_rate', 0)}%, which {'does not violate' if not violation else 'violates'} the 5% policy."
     )
 
 def check_data_completeness(metrics: Dict[str, Any]) -> RuleResult:
@@ -34,17 +35,25 @@ def check_data_completeness(metrics: Dict[str, Any]) -> RuleResult:
         rule_id="COMPLETENESS_CHECK",
         passed=passed,
         weight=0.2,
-        explanation=f"Data completeness is {metrics.get('data_completeness', 0)}%, which is {'above' if passed else 'below'} the 70% threshold."
+        explanation=f"Data completeness is {metrics.get('data_completeness', 0)}%, which is {'above' if passed else 'below'} the 70% minimum threshold."
     )
 
 def explain_decision(decision: DecisionRecommendation, rule_results: List[RuleResult]) -> Dict[str, Any]:
     passed_rules = [r for r in rule_results if r.passed]
     failed_rules = [r for r in rule_results if not r.passed]
-    summary = f"Recommendation '{decision.title}' is fully supported." if not failed_rules else f"Recommendation '{decision.title}' is generated despite {len(failed_rules)} warning(s)."
+
+    if not failed_rules:
+        summary = f"Recommendation '{decision.title}' is fully supported by all system checks."
+    else:
+        summary = f"Recommendation '{decision.title}' is generated despite {len(failed_rules)} warning(s)."
+
+    contributing_factors = [r.explanation for r in passed_rules]
+    triggered_rule_ids = [r.rule_id for r in rule_results]
+
     return {
         "summary": summary,
-        "contributing_factors": [r.explanation for r in passed_rules],
-        "triggered_rule_ids": [r.rule_id for r in rule_results]
+        "contributing_factors": contributing_factors,
+        "triggered_rule_ids": triggered_rule_ids
     }
 
 def generate_recommendations(
@@ -52,9 +61,13 @@ def generate_recommendations(
     confidence_score: float,
     persona: UserRole
 ) -> List[DecisionRecommendation]:
+    """
+    Generates recommendations based on analytics, confidence, and persona weighting.
+    """
     recommendations = []
+    
     weight_multiplier = PERSONA_WEIGHTS.get(persona, 1.0)
-    weighted_confidence = int(min(100, confidence_score * weight_multiplier))
+    weighted_confidence = min(100, int(confidence_score * weight_multiplier))
 
     rule_results = [
         check_confidence_threshold(confidence_score),
@@ -70,11 +83,12 @@ def generate_recommendations(
             confidence=weighted_confidence,
             rationale="High confidence and data quality allow for safe automation.",
             impacted_metrics=["Lead Engagement", "Conversion Rate"],
-            governance_flags=[],
-            suggested_owner=SuggestedOwner.MARKETING
+            suggested_owner=SuggestedOwner.MARKETING,
+            governance_flags=[] # Explicitly provide empty list
         )
-        rec.explanation = explain_decision(rec, rule_results)
-        rec.explainability_summary = rec.explanation["summary"]
+        explanation = explain_decision(rec, rule_results)
+        rec.explainability_summary = explanation["summary"]
+        rec.explanation = explanation
         recommendations.append(rec)
 
     if not check_data_completeness(analytics_metrics).passed:
@@ -85,23 +99,24 @@ def generate_recommendations(
             confidence=weighted_confidence,
             rationale="Low data completeness reduces the effectiveness of sales and marketing efforts.",
             impacted_metrics=["Data Quality", "Lead Conversion Rate"],
-            governance_flags=["data_gap"],
-            suggested_owner=SuggestedOwner.OPS
+            suggested_owner=SuggestedOwner.OPS,
+            governance_flags=["data_gap"] # Provide governance flag
         )
-        rec.explanation = explain_decision(rec, rule_results)
-        rec.explainability_summary = rec.explanation["summary"]
+        explanation = explain_decision(rec, rule_results)
+        rec.explainability_summary = explanation["summary"]
+        rec.explanation = explanation
         recommendations.append(rec)
 
     return recommendations
 
-def filter_recommendations_by_persona(
-    recommendations: List[DecisionRecommendation], 
-    persona: UserRole
-) -> List[DecisionRecommendation]:
+def filter_recommendations_by_persona(recommendations: List[DecisionRecommendation], persona: UserRole) -> List[DecisionRecommendation]:
+    """
+    Filters the generated recommendations to show only what is relevant for the persona.
+    """
     if persona == UserRole.FOUNDER:
-        return [r for r in recommendations if r.priority in [RecommendationPriority.CRITICAL, RecommendationPriority.HIGH]]
+        return [rec for rec in recommendations if rec.priority in [RecommendationPriority.CRITICAL, RecommendationPriority.HIGH]]
     elif persona == UserRole.SALES_MANAGER:
-        return [r for r in recommendations if r.suggested_owner in [SuggestedOwner.SALES, SuggestedOwner.MARKETING]]
+        return [rec for rec in recommendations if rec.suggested_owner in [SuggestedOwner.SALES, SuggestedOwner.MARKETING]]
     elif persona == UserRole.OPS_CRM:
-        return [r for r in recommendations if r.suggested_owner == SuggestedOwner.OPS]
+        return [rec for rec in recommendations if rec.suggested_owner == SuggestedOwner.OPS]
     return recommendations

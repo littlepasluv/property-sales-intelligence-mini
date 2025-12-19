@@ -24,6 +24,7 @@ def init_session_state():
         "dashboard_loaded": False,
         "recommendations_data": None,
         "confidence_data": None,
+        "simulation_result": None, # Added this line
         "last_error": None
     }
     for key, value in defaults.items():
@@ -167,6 +168,45 @@ def render_trust_confidence(confidence_data):
         else:
             st.info("Detailed explanation is currently unavailable.")
 
+def render_scenario_simulator():
+    st.header("🔮 What-If Scenario Simulator")
+    
+    with st.container(border=True):
+        st.subheader("Adjust Metrics")
+        col1, col2 = st.columns(2)
+        with col1:
+            sla_delta = st.slider("SLA Breach Improvement (%)", -50, 50, 0, 5, key="sim_sla")
+        with col2:
+            rt_delta = st.slider("Response Time Improvement (%)", -50, 50, 0, 5, key="sim_rt")
+
+        if st.button("Run Simulation", use_container_width=True, type="primary"):
+            payload = {
+                "overrides": {
+                    "duplicate_rate": sla_delta / 100,
+                    "avg_response_time": rt_delta / 100
+                }
+            }
+            with st.spinner("Calculating impact..."):
+                st.session_state.simulation_result = api_request("post", "analytics/simulate", json=payload)
+
+    with st.container():
+        if not st.session_state.simulation_result:
+            st.info("Run simulation to see results.")
+        else:
+            res = st.session_state.simulation_result
+            st.subheader("Simulation Impact")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("##### Baseline")
+                st.metric(label=f"Risk Score ({res['baseline']['decision']})", value=res['baseline']['risk_score'])
+            with col2:
+                st.markdown("##### Simulated")
+                st.metric(label=f"Risk Score ({res['simulated']['decision']})", value=res['simulated']['risk_score'], delta=res['impact']['risk_delta'], delta_color="inverse")
+            if res['impact']['decision_changed']:
+                st.success(f"✅ Decision level improved from **{res['baseline']['decision']}** to **{res['simulated']['decision']}**.")
+            else:
+                st.info("No change in overall decision level.")
+
 def render_navigation():
     PAGES = {"Dashboard": "📊"}
     if st.session_state.user_role in ["founder", "ops_crm"]:
@@ -224,9 +264,7 @@ def main():
         render_trust_confidence(st.session_state.confidence_data)
         st.markdown("---")
         if st.session_state.user_role in ["founder", "ops_crm"]:
-            # Placeholder for What-If Simulator (D5.3)
-            st.header("🔮 What-If Scenario Simulator")
-            st.info("Coming in Phase D5.3", icon="🏗️")
+             render_scenario_simulator()
 
     elif st.session_state.active_page == "Governance & Audit":
         st.title("⚖️ Governance & Audit")
