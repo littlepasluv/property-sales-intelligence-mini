@@ -24,7 +24,8 @@ def init_session_state():
         "dashboard_loaded": False,
         "recommendations_data": None,
         "confidence_data": None,
-        "simulation_result": None, # Added this line
+        "simulation_result": None,
+        "learning_insights": None, # Added for D5.5
         "last_error": None
     }
     for key, value in defaults.items():
@@ -91,6 +92,7 @@ def handle_logout():
 def load_dashboard_data():
     st.session_state.recommendations_data = api_request("get", "decisions/recommendations")
     st.session_state.confidence_data = api_request("get", "analytics/confidence")
+    st.session_state.learning_insights = api_request("get", "learning/insights") # Added for D5.5
     if st.session_state.last_error is None:
         st.session_state.dashboard_loaded = True
 
@@ -105,6 +107,41 @@ def render_recommendations(recommendations):
             st.markdown(f"**{rec['title']}**")
             st.caption(f"Priority: **{rec['priority']}** | Confidence: **{rec['confidence']}%** | Owner: **{rec['suggested_owner']}**")
             st.write(rec['recommendation'])
+
+            # --- D5.5: Human-in-the-Loop Feedback ---
+            col_approve, col_reject = st.columns([1, 1])
+            with col_approve:
+                if st.button("Approve", key=f"approve_{rec['id']}", use_container_width=True):
+                    with st.spinner("Recording approval..."):
+                        api_request(
+                            "post",
+                            "learning/feedback",
+                            json={
+                                "recommendation_id": str(rec['id']),
+                                "recommendation_title": rec['title'],
+                                "decision": "approved",
+                                "reason": "User approved via dashboard"
+                            }
+                        )
+                        st.success("Approved!")
+                        st.rerun()
+            
+            with col_reject:
+                if st.button("Reject", key=f"reject_{rec['id']}", use_container_width=True):
+                    with st.spinner("Recording rejection..."):
+                        api_request(
+                            "post",
+                            "learning/feedback",
+                            json={
+                                "recommendation_id": str(rec['id']),
+                                "recommendation_title": rec['title'],
+                                "decision": "rejected",
+                                "reason": "User rejected via dashboard"
+                            }
+                        )
+                        st.warning("Rejected!")
+                        st.rerun()
+            # ----------------------------------------
 
             if rec.get('overridden'):
                 override_details = rec.get('override_details', {})
@@ -140,6 +177,35 @@ def render_recommendations(recommendations):
                         st.markdown("**Contributing Factors:**")
                         for factor in rec['explanation']['contributing_factors']:
                             st.markdown(f"- {factor}")
+
+def render_learning_insights(insights):
+    """
+    Renders the D5.5 Learning Insights section.
+    """
+    st.header("📚 Learning Insights (Read-Only)")
+    if not insights:
+        st.info("No learning data available yet.")
+        return
+
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Rejection Rate", f"{insights.get('rejection_rate', 0)}%")
+        st.caption(f"Based on {insights.get('total_decisions', 0)} decisions")
+
+    with col2:
+        drift = insights.get('confidence_drift', 'low')
+        color = "green" if drift == "low" else "orange" if drift == "medium" else "red"
+        st.markdown(f"**Confidence Drift:** :{color}[{drift.upper()}]")
+        st.caption("Drift based on rejection frequency")
+
+    with col3:
+        bias = insights.get('persona_bias_detected', False)
+        if bias:
+            st.error("⚠️ Persona Bias Detected!")
+            st.write(f"Biased Personas: {', '.join(insights.get('biased_personas', []))}")
+        else:
+            st.success("✅ No Persona Bias Detected")
 
 def render_trust_confidence(confidence_data):
     st.header("Trust & Confidence")
@@ -260,6 +326,8 @@ def main():
         
         st.title("📊 Main Dashboard")
         render_recommendations(st.session_state.recommendations_data)
+        st.markdown("---")
+        render_learning_insights(st.session_state.learning_insights) # Added for D5.5
         st.markdown("---")
         render_trust_confidence(st.session_state.confidence_data)
         st.markdown("---")

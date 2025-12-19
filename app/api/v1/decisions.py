@@ -17,6 +17,8 @@ from app.services.audit_log_service import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
 from app.core.security import get_current_user_role, UserRole, require_roles, UserContext, get_current_user
 from app.services.decision_sla_service import evaluate_decision_sla
+from app.models.decision_feedback import DecisionFeedback
+from app.schemas.decision_feedback import DecisionFeedbackCreate, DecisionFeedbackRead
 
 router = APIRouter(
     prefix="/decisions",
@@ -66,6 +68,52 @@ def get_decision_recommendations(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate recommendations: {str(e)}"
+        )
+
+@router.post("/feedback", response_model=DecisionFeedbackRead, status_code=status.HTTP_201_CREATED)
+def submit_decision_feedback(
+    feedback: DecisionFeedbackCreate,
+    db: Session = Depends(get_db),
+    role: UserRole = Depends(get_current_user_role)
+):
+    """
+    Records human feedback on a decision recommendation.
+    """
+    try:
+        db_feedback = DecisionFeedback(
+            recommendation_id=feedback.recommendation_id,
+            recommendation_title=feedback.recommendation_title,
+            persona=role.value if role else "anonymous",
+            decision=feedback.decision.value,
+            reason=feedback.reason
+        )
+        db.add(db_feedback)
+        db.commit()
+        db.refresh(db_feedback)
+
+        # Audit Log
+        log_details = json.dumps({
+            "recommendation_id": feedback.recommendation_id,
+            "recommendation_title": feedback.recommendation_title,
+            "decision": feedback.decision.value,
+            "reason": feedback.reason
+        })
+        
+        audit_entry = AuditLogCreate(
+            event_type="decision_feedback",
+            decision=feedback.decision.value,
+            details=log_details,
+            persona=role.value if role else "anonymous"
+        )
+        create_audit_log_entry(db, audit_entry)
+
+        return db_feedback
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to submit feedback: {str(e)}"
         )
 
 @router.post("", response_model=DecisionProposalOut, status_code=status.HTTP_201_CREATED)
