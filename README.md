@@ -1,102 +1,158 @@
-# 🧠 DscienTia Core
-
-DscienTia Core is a modular, governance-first decision intelligence engine.
-Property Sales is implemented as the first vertical.
-
-Property Sales Intelligence (Mini) is a modular backend MVP built with FastAPI
-to manage leads and follow-ups in property sales workflows.
-The project emphasizes clean architecture, testability, and extensibility,
-making it suitable as a foundation for data-driven sales intelligence
-and social impact platforms.
+# DscienTia Core  
+**Data-Driven Decision Intelligence Platform**  
 
 ---
 
-## 🎯 Problem Statement
+## 🚀 Overview
 
-Many independent property agents and small sales teams manage leads using
-spreadsheets, chat applications, or personal notes.
-This often results in:
-- Missed follow-ups
-- Inconsistent lead handling
-- Lack of performance insights
-- Difficulty scaling operations
+**DscienTia Core** is a modular, governance-first decision intelligence platform designed to transform raw operational data into **explainable, auditable, and persona-aware recommendations**.
 
-This project demonstrates how a lightweight backend system can centralize
-lead data, track follow-up activities, and provide a solid foundation
-for future analytics and automation.
+This repository implements **Property Sales Intelligence** as the first vertical, serving as a real-world use case for the DscienTia Core architecture.
+
+DscienTia Core is built for:
+- Decision transparency
+- Governance & auditability
+- Human-in-the-loop approval
+- Future AI & Web3 extensibility
 
 ---
 
-## 🧠 Target Users
+## 🧠 Core Principles
 
-- Independent property agents
-- Small sales teams and UMKM
-- Developers building sales or CRM MVPs
-- Social impact and community engagement platforms
+- **Vertical-first architecture**  
+  Business logic lives in domain verticals, not in the core.
+
+- **Governance by design**  
+  Every decision can be logged, reviewed, approved, and audited.
+
+- **Persona-aware intelligence**  
+  Recommendations adapt to Founder, Sales Manager, and Operations roles.
+
+- **Explainability over black-box AI**  
+  Decisions are traceable, not opaque.
 
 ---
 
-## 🧱 Architecture Overview
+## 🏗️ Project Architecture
 
-The application follows a modular and layered architecture:
+
 
 ```text
-app/
-├── api/v1/             # Versioned API routes
-│   ├── lead.py         # Lead endpoints
-│   └── followup.py     # Follow-up endpoints
-├── models/             # SQLAlchemy ORM models
-├── schemas/            # Pydantic request/response schemas
-├── services/           # Business logic layer
-├── core/               # Database configuration & settings
-└── main.py             # FastAPI application entry point
-tests/                  # Automated API tests
-scripts/                # Utility scripts (e.g. DB init)
-ui/                     # Lightweight UI (Streamlit prototype)
+├── app/ # Backend (FastAPI)
+│ ├── main.py
+│ ├── config.py
+│ ├── database.py
+│ │
+│ ├── core/ # Vertical-agnostic intelligence layer
+│ │ ├── auth/ # RBAC, security, dependencies
+│ │ ├── governance/ # Audit, approval, policies
+│ │ ├── decision/ # Scoring, confidence, explainability
+│ │ └── personas/ # Persona registry & weighting
+│ │
+│ ├── verticals/
+│ │ └── property_sales/ # First vertical implementation
+│ │ ├── api.py
+│ │ ├── rules.py
+│ │ ├── scoring.py
+│ │ ├── schemas.py
+│ │ └── service.py
+│ │
+│ ├── api/
+│ │ └── v1/ # HTTP API layer (routing only)
+│ │
+│ ├── models/ # SQLAlchemy models
+│ └── schemas/ # Pydantic schemas
+│
+├── ui/ # Streamlit UI
+│ ├── streamlit_app.py
+│ ├── pages/
+│ ├── components/
+│ └── state.py
+│
+├── tests/ # Unit & rule tests
+├── docs/ # Design & governance docs
+├── assets/ # Images & diagrams
+└── README.md
 ```
 
 
-This structure ensures:
-- Clear separation of concerns
-- Easy testing and maintenance
-- Flexibility for future extensions
 
 ---
 
-## 🚀 Technology Stack
+## 🔑 Key Features
 
-- **Language**: Python 3.10+
-- **Web Framework**: FastAPI
-- **ORM**: SQLAlchemy
-- **Data Validation**: Pydantic
-- **Database**: SQLite (development & testing)
-- **Testing**: Pytest + HTTPX
+### Decision Intelligence
+- Risk scoring
+- SLA breach detection
+- Persona-weighted recommendations
+- Confidence scoring
+
+### Governance & Trust
+- Full audit trail
+- Human approval flow
+- Explainability metadata
+- Cache & decision trace control
+
+### UX & Operations
+- Modular Streamlit dashboard
+- Persona selector
+- Ingestion monitoring
+- Data quality indicators
 
 ---
 
-## 🔧 Local Development Setup
+## 🧩 Property Sales Vertical (v1)
 
-### 1️⃣ Clone the repository
-```bash
-git clone https://github.com/littlepasluv/property-sales-intelligence-mini.git
-cd property-sales-intelligence-mini
-```
+The **Property Sales** vertical demonstrates how DscienTia Core can be applied to a real business domain.
 
-### 2️⃣ Create and activate virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate   # macOS / Linux
-```
+**Capabilities:**
+- Lead ingestion (CRM, WhatsApp, Ads – mock & extensible)
+- Risk & SLA analysis
+- Persona-based action recommendations
+- Governance-ready decisions
 
-### 3️⃣ Install dependencies
-```bash
-pip install -r requirements.txt
-```
+This vertical acts as a **reference blueprint** for future domains.
 
-### 4️⃣ Run the application
+---
+
+## 🔐 Authentication & RBAC
+
+- Role-based access control (RBAC)
+- Roles: `Founder`, `Sales Manager`, `Operations / CRM`, `Viewer`
+- Governance-sensitive actions require approval
+- DEV_MODE available for local testing
+
+---
+
+## ▶️ Running the Project
+
+### Backend
 ```bash
 uvicorn app.main:app --reload
 ```
+
+---
+
+Frontend (Streamlit)
+```bash
+streamlit run ui/streamlit_app.py
+```
+
+---
+
+🧪 Testing
+```bash
+pytest tests/
+```
+Includes:
+
+Rule validation
+
+Persona weighting tests
+
+Scoring logic tests
+
+---
 
 Open your browser at:
 http://127.0.0.1:8000/docs
@@ -107,56 +163,35 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 🧪 Testing
+🧭 Roadmap
 
-The project includes automated API tests that cover:
-- Core lead and follow-up workflows
-- Validation errors and edge cases
-- API response consistency
+Multi-vertical support (NGO, Education, Public Sector)
 
-Run all tests with:
-```bash
-pytest
-```
+Advanced explainability layers
 
----
+Web3-ready audit anchoring
 
-## 🔮 Roadmap
+AI-assisted decision copilots
 
-Planned improvements include:
-- Analytics and reporting dashboard
-- Lead scoring and prioritization
-- Authentication and role-based access
-- Integration with messaging or advertising platforms
+Plugin system for new domains
 
 ---
 
-## 🌍 Reusability & Extensibility
+🌍 Vision
 
-Although this project uses property sales as a domain example,
-the architecture is intentionally domain-agnostic.
-With minimal changes, it can be adapted for:
-- Community engagement tracking
-- NGO program monitoring
-- Research data collection systems
-- Customer relationship management (CRM) tools
+DscienTia stands for:
 
----
+Data Science for Justice, Intelligence, and Transformation
 
-## 📌 Project Status
-
-- **Current version**: v0.1.0
-- **Stage**: MVP foundation
-- **Focus**: Stability, clarity, and extensibility
+This project is not just about analytics —
+it is about building trustworthy decision systems for complex social and economic environments.
 
 ---
 
-## 🧭 License
+📜 License
 
-This repository serves as a reusable backend foundation for data-driven sales intelligence products.
-
-This project is currently shared for learning and demonstration purposes.
-A formal license can be added in future iterations.
+MIT License (initially)
+Governance extensions may introduce additional policies in the future.
 
 
 ⬆️ **END OF README** ⬆️
