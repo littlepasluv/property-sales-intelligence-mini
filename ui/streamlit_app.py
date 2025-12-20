@@ -27,7 +27,8 @@ def init_session_state():
         "confidence_data": None,
         "simulation_result": None,
         "learning_insights": None,
-        "pending_reviews": None, # Added for D5.6
+        "pending_reviews": None,
+        "replay_data": None, # Added for D5.7
         "last_error": None
     }
     for key, value in defaults.items():
@@ -111,6 +112,10 @@ def render_recommendations(recommendations):
             st.markdown(f"**{rec['title']}**")
             st.caption(f"Priority: **{rec['priority']}** | Confidence: **{rec['confidence']}%** | Owner: **{rec['suggested_owner']}**")
             st.write(rec['recommendation'])
+            
+            # Display DTID if available (D5.7)
+            if rec.get('id') and rec['id'].startswith('dsc_'):
+                st.caption(f"Trace ID: `{rec['id']}`")
 
             # --- D5.5: Human-in-the-Loop Feedback ---
             col_approve, col_reject = st.columns([1, 1])
@@ -262,6 +267,50 @@ def render_learning_reviews(reviews):
                         st.warning("Review Rejected!")
                         st.rerun()
 
+def render_decision_replay():
+    """
+    Renders the D5.7 Decision Replay Panel.
+    """
+    st.header("⏪ Decision Replay (Traceability)")
+    
+    with st.form(key="replay_form"):
+        dtid_input = st.text_input("Enter Decision Trace ID (DTID)", placeholder="dsc_...")
+        submit_replay = st.form_submit_button("Replay Decision")
+    
+    if submit_replay and dtid_input:
+        with st.spinner("Fetching decision trace..."):
+            replay_data = api_request("get", f"decisions/{dtid_input}")
+            if replay_data:
+                st.session_state.replay_data = replay_data
+            else:
+                st.error("Decision trace not found.")
+                st.session_state.replay_data = None
+
+    if st.session_state.replay_data:
+        data = st.session_state.replay_data
+        st.success(f"Trace Found: {data['decision_id']}")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Confidence", f"{data['confidence']}%")
+        with col2:
+            st.metric("Status", data['status'])
+        with col3:
+            st.metric("Model Version", data['model_version'])
+            
+        with st.expander("Full Snapshot Data", expanded=True):
+            st.markdown("### Inputs")
+            st.json(data['inputs'])
+            
+            st.markdown("### Rules Fired")
+            st.write(data['rules_fired'])
+            
+            st.markdown("### Explanation")
+            st.json(data['explanation'])
+            
+            st.markdown("### Outcome")
+            st.json(data['outcome'])
+
 def render_trust_confidence(confidence_data):
     st.header("Trust & Confidence")
     if not confidence_data:
@@ -332,7 +381,8 @@ def render_navigation():
     PAGES = {"Dashboard": "📊"}
     if st.session_state.user_role in ["founder", "ops_crm"]:
         PAGES["Governance & Audit"] = "⚖️"
-        PAGES["Learning Review"] = "🧐" # Added for D5.6
+        PAGES["Learning Review"] = "🧐"
+        PAGES["Decision Replay"] = "⏪" # Added for D5.7
     if st.session_state.user_role == "ops_crm":
         PAGES["Ingestion"] = "📥"
 
@@ -399,6 +449,9 @@ def main():
                  load_dashboard_data()
              st.rerun()
         render_learning_reviews(st.session_state.pending_reviews)
+
+    elif st.session_state.active_page == "Decision Replay":
+        render_decision_replay()
 
     elif st.session_state.active_page == "Governance & Audit":
         st.title("⚖️ Governance & Audit")

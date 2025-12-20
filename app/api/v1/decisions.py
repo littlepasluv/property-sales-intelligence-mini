@@ -8,7 +8,7 @@ from app.schemas.decision import DecisionRecommendation
 from app.schemas.decision_proposal import DecisionProposalCreate, DecisionProposalOut
 from app.schemas.decision_review import DecisionReview
 from app.schemas.override import DecisionOverride
-from app.services.decision_engine import generate_recommendations, filter_recommendations_by_persona, explain_decision
+from app.services.decision_engine import generate_recommendations, filter_recommendations_by_persona, explain_decision, PERSONA_WEIGHTS
 from app.services.decision_service import create_decision_proposal, override_decision
 from app.services.decision_review_service import review_decision
 from app.services.confidence_service import get_system_confidence
@@ -19,6 +19,8 @@ from app.core.security import get_current_user_role, UserRole, require_roles, Us
 from app.services.decision_sla_service import evaluate_decision_sla
 from app.models.decision_feedback import DecisionFeedback
 from app.schemas.decision_feedback import DecisionFeedbackCreate, DecisionFeedbackRead
+from app.services.traceability_service import capture_decision_snapshot, get_decision_snapshot
+from app.schemas.decision_snapshot import DecisionSnapshotRead
 
 router = APIRouter(
     prefix="/decisions",
@@ -28,7 +30,8 @@ router = APIRouter(
 @router.get("/recommendations", response_model=List[DecisionRecommendation])
 def get_decision_recommendations(
     db: Session = Depends(get_db),
-    role: UserRole = Depends(get_current_user_role)
+    role: UserRole = Depends(get_current_user_role),
+    user: UserContext = Depends(get_current_user)
 ):
     """
     Generates and filters actionable recommendations based on the user's persona.
@@ -46,12 +49,29 @@ def get_decision_recommendations(
         
         filtered_recommendations = filter_recommendations_by_persona(all_recommendations, role)
         
+        final_recommendations = []
         for rec in filtered_recommendations:
+            # Capture snapshot for traceability
+            snapshot = capture_decision_snapshot(
+                db=db,
+                decision=rec,
+                user_id=user.user_id,
+                persona=role,
+                inputs=analytics_metrics,
+                rules_fired=rec.explanation.get("triggered_rule_ids", []) if rec.explanation else [],
+                weights={"persona_weight": PERSONA_WEIGHTS.get(role, 1.0)},
+                model_version="v1.0"
+            )
+            
+            # Update recommendation ID with the generated DTID
+            rec.id = snapshot.decision_id
+            
             log_details = json.dumps({
                 "title": rec.title,
                 "priority": rec.priority.value,
                 "confidence": rec.confidence,
-                "explanation": rec.explanation
+                "explanation": rec.explanation,
+                "dtid": snapshot.decision_id
             })
             
             log_entry = AuditLogCreate(
@@ -61,14 +81,28 @@ def get_decision_recommendations(
                 persona=role.value if role else "anonymous"
             )
             create_audit_log_entry(db, log_entry)
+            final_recommendations.append(rec)
         
-        return filtered_recommendations
+        return final_recommendations
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate recommendations: {str(e)}"
         )
+
+@router.get("/{decision_id}", response_model=DecisionSnapshotRead)
+def get_decision_trace(
+    decision_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves the full snapshot and trace for a specific decision ID (DTID).
+    """
+    snapshot = get_decision_snapshot(db, decision_id)
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="Decision trace not found")
+    return snapshot
 
 @router.post("/feedback", response_model=DecisionFeedbackRead, status_code=status.HTTP_201_CREATED)
 def submit_decision_feedback(
