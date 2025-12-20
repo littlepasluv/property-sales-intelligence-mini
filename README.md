@@ -1,5 +1,22 @@
-# DscienTia Core  
-**Data-Driven Decision Intelligence Platform**  
+<p align="center">
+  <img src="assets/logo.png" alt="DscienTia Core Logo" width="160"/>
+</p>
+
+<h1 align="center">DscienTia Core</h1>
+
+<p align="center">
+  <strong>Decision Intelligence Infrastructure for Real-World Impact</strong>
+</p>
+
+<p align="center">
+  DscienTia Core is a data-driven decision intelligence platform designed to
+  support ethical governance, explainable recommendations, and scalable
+  analytics — starting with Property Sales as its first vertical.
+</p>
+
+<p align="center">
+  Built for transparency · governance · real-world deployment
+</p>
 
 ---
 

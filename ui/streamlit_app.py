@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 # --- FINALIZATION: Auth bypass is permanently disabled ---
 DEV_MODE_BYPASS_AUTH = False
 
-st.set_page_config(page_title="DscienTia Core", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="DscienTia Core", page_icon="assets/logo.png", layout="wide")
 
 def init_session_state():
     """
@@ -102,7 +102,7 @@ def load_dashboard_data():
         st.session_state.dashboard_loaded = True
 
 def render_recommendations(recommendations):
-    st.header("🧠 Decision Recommendations")
+    st.header("Decision Recommendations")
     if not recommendations:
         st.success("✅ No critical decisions needed.")
         return
@@ -191,7 +191,7 @@ def render_learning_insights(insights):
     """
     Renders the D5.5 Learning Insights section.
     """
-    st.header("📚 Learning Insights (Read-Only)")
+    st.header("Learning Insights (Read-Only)")
     if not insights:
         st.info("No learning data available yet.")
         return
@@ -228,7 +228,7 @@ def render_learning_reviews(reviews):
     """
     Renders the D5.6 Learning Review Panel.
     """
-    st.header("🧐 Learning Review & Approval")
+    st.header("Learning Review & Approval")
     
     if st.button("Generate New Review Proposal", use_container_width=True):
         with st.spinner("Generating proposal..."):
@@ -271,7 +271,7 @@ def render_decision_replay():
     """
     Renders the D5.7 Decision Replay Panel.
     """
-    st.header("⏪ Decision Replay (Traceability)")
+    st.header("Decision Replay (Traceability)")
     
     with st.form(key="replay_form"):
         dtid_input = st.text_input("Enter Decision Trace ID (DTID)", placeholder="dsc_...")
@@ -339,7 +339,7 @@ def render_trust_confidence(confidence_data):
             st.info("Detailed explanation is currently unavailable.")
 
 def render_scenario_simulator():
-    st.header("🔮 What-If Scenario Simulator")
+    st.header("What-If Scenario Simulator")
     
     with st.container(border=True):
         st.subheader("Adjust Metrics")
@@ -394,9 +394,18 @@ def render_navigation():
             st.rerun()
 
 def setup_sidebar():
-    st.sidebar.title("DscienTia Core")
-    st.sidebar.caption("Decision Intelligence Core Platform")
-    st.sidebar.caption("Property Sales as First Vertical")
+    # Force 0px border radius on sidebar images to ensure full rectangle shape
+    st.markdown(
+        """
+        <style>
+            [data-testid="stSidebar"] img {
+                border-radius: 0px !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.sidebar.image("assets/logo.png", width=140)
     if st.session_state.is_authenticated:
         st.sidebar.success(f"Logged in as: **{st.session_state.user_role.replace('_', ' ').title()}**")
         st.sidebar.button("Logout", on_click=handle_logout, use_container_width=True)
@@ -432,7 +441,7 @@ def main():
                 load_dashboard_data()
             st.rerun()
         
-        st.title("🧠 DscienTia Core")
+        st.title("DscienTia Core")
         st.caption("Decision Intelligence Core Platform · Property Sales as First Vertical")
         render_recommendations(st.session_state.recommendations_data)
         st.markdown("---")
@@ -454,10 +463,10 @@ def main():
         render_decision_replay()
 
     elif st.session_state.active_page == "Governance & Audit":
-        st.title("⚖️ Governance & Audit")
+        st.title("Governance & Audit")
         st.write("Governance content goes here.")
     elif st.session_state.active_page == "Ingestion":
-        st.title("📥 Data Ingestion")
+        st.title("Data Ingestion")
         st.write("Ingestion controls go here.")
 
 if __name__ == "__main__":

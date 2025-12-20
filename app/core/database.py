@@ -5,12 +5,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 # --- Absolute Path for Database ---
 # Build a path to the project root directory
-# This makes the database path independent of the current working directory
+# app/core/database.py -> app/core -> app -> prosi-mini
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DB_NAME = "prosi_mini.db"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{PROJECT_ROOT.joinpath(DB_NAME)}"
 
-print(f"Database URL: {SQLALCHEMY_DATABASE_URL}") # For debugging
+# print(f"Database URL: {SQLALCHEMY_DATABASE_URL}") # For debugging
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
