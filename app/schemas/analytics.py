@@ -1,32 +1,24 @@
-from pydantic import BaseModel, Field
-from typing import Dict, List
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 
-class LeadAnalytics(BaseModel):
-    # ... (existing code)
-    pass
-
-class FollowupAnalytics(BaseModel):
-    # ... (existing code)
-    pass
-
-class DashboardAnalytics(BaseModel):
-    # ... (existing code)
-    pass
-
-# --- Confidence Drivers Schemas ---
-
-class ConfidenceDriver(BaseModel):
-    """
-    Represents a single factor contributing to the overall confidence score.
-    """
-    name: str
-    status: str  # e.g., "CRITICAL", "WARNING", "GOOD"
-    score: float
+class ConfidenceSignal(BaseModel):
+    component: str
+    status: str
     message: str
 
-class ConfidenceDriversResponse(BaseModel):
-    """
-    The response model for the confidence drivers endpoint.
-    """
-    overall_confidence: str
-    drivers: List[ConfidenceDriver]
+class ConfidenceScore(BaseModel):
+    score: float
+    level: str
+    signals: List[ConfidenceSignal]
+    metrics: Dict[str, Any]
+    explanation_summary: str
+    explanation_details: List[str]
+    decision_guidance: str
+
+class SimulationRequest(BaseModel):
+    overrides: Dict[str, float]
+
+class SimulationResponse(BaseModel):
+    baseline: Dict[str, Any]
+    simulated: Dict[str, Any]
+    impact: Dict[str, Any]

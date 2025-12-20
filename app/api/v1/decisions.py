@@ -8,14 +8,14 @@ from app.schemas.decision import DecisionRecommendation
 from app.schemas.decision_proposal import DecisionProposalCreate, DecisionProposalOut
 from app.schemas.decision_review import DecisionReview
 from app.schemas.override import DecisionOverride
-from app.services.decision_engine import generate_recommendations, filter_recommendations_by_persona, explain_decision, PERSONA_WEIGHTS
+from app.core.decision.engine import generate_recommendations, filter_recommendations_by_persona, explain_decision, PERSONA_WEIGHTS
 from app.services.decision_service import create_decision_proposal, override_decision
 from app.services.decision_review_service import review_decision
-from app.services.confidence_service import get_system_confidence
+from app.core.decision.confidence import get_system_confidence
 from app.services.analytics_service import get_key_metrics
-from app.services.audit_log_service import create_audit_log_entry
+from app.core.governance.audit import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
-from app.core.security import get_current_user_role, UserRole, require_roles, UserContext, get_current_user
+from app.core.auth.security import get_current_user_role, UserRole, require_roles, UserContext, get_current_user
 from app.services.decision_sla_service import evaluate_decision_sla
 from app.models.decision_feedback import DecisionFeedback
 from app.schemas.decision_feedback import DecisionFeedbackCreate, DecisionFeedbackRead

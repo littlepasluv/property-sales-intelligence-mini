@@ -5,7 +5,7 @@ from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from app.models.decision_snapshot import DecisionSnapshot
 from app.schemas.decision import DecisionRecommendation
-from app.core.security import UserRole
+from app.core.auth.security import UserRole
 
 def generate_dtid() -> str:
     """

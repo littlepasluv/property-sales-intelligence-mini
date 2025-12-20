@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_HOURS
-from app.core.security import UserRole
+from app.core.auth.security import UserRole
 from app.core.database import get_db
-from app.services.audit_log_service import create_audit_log_entry
+from app.core.governance.audit import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])

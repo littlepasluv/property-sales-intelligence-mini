@@ -1,13 +1,14 @@
-# In-memory "database" for now
-fake_listings_db = [
-    {"id": 1, "address": "123 Main St", "price": 500000, "agent_id": 1},
-    {"id": 2, "address": "456 Oak Ave", "price": 750000, "agent_id": 1},
-    {"id": 3, "address": "789 Pine Ln", "price": 620000, "agent_id": 2},
-]
+from sqlalchemy.orm import Session
+from typing import List
+from app.models.listing import Listing
+from app.schemas.listing import ListingCreate
 
-def get_all_listings():
-    """
-    Business logic to retrieve all listings.
-    For now, it just returns the fake database.
-    """
-    return fake_listings_db
+def create_listing(db: Session, listing_in: ListingCreate) -> Listing:
+    db_listing = Listing(**listing_in.model_dump())
+    db.add(db_listing)
+    db.commit()
+    db.refresh(db_listing)
+    return db_listing
+
+def get_all_listings(db: Session) -> List[Listing]:
+    return db.query(Listing).all()

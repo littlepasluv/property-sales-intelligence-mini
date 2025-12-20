@@ -1,8 +1,6 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel
 
 class DecisionOverride(BaseModel):
-    by: str  # User ID
+    by: str
     role: str
     reason: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)

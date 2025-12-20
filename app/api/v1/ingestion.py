@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Dict
 
 from app.ingestion.registry import registry
-from app.core.security import require_roles, UserRole
+from app.core.auth.security import require_roles, UserRole
 
 router = APIRouter(
     prefix="/ingestion",

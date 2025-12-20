@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.database import Base
 from app.services.traceability_service import generate_dtid, capture_decision_snapshot, get_decision_snapshot, determine_governance_status
 from app.schemas.decision import DecisionRecommendation, RecommendationPriority, SuggestedOwner
-from app.core.security import UserRole
+from app.core.auth.security import UserRole
 
 # Setup in-memory DB for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

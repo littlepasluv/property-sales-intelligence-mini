@@ -2,6 +2,6 @@ from pydantic import BaseModel
 from typing import Optional
 
 class DecisionReview(BaseModel):
-    action: str  # APPROVE or REJECT
+    action: str
     reviewer: str
     note: Optional[str] = None

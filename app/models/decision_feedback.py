@@ -13,6 +13,7 @@ class DecisionFeedback(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     recommendation_id = Column(String, index=True, nullable=False)
+    recommendation_title = Column(String, index=True, nullable=True) # Added for rule-based aggregation
     persona = Column(String, nullable=False)
     decision = Column(String, nullable=False) # Storing enum as string for SQLite compatibility ease
     reason = Column(Text, nullable=True)

@@ -1,12 +1,12 @@
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, date
+from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import date, datetime
 
 class FollowupBase(BaseModel):
-    lead_id: int = Field(..., description="ID of the lead this follow-up belongs to")
-    note: str = Field(..., description="Details of the interaction", json_schema_extra={"example": "Customer asked for floor plan"})
-    status: str = Field("pending", description="Status of this interaction", json_schema_extra={"example": "contacted"})
-    next_contact_date: Optional[date] = Field(None, description="When to contact the lead next", json_schema_extra={"example": "2023-12-25"})
+    lead_id: int
+    note: str = Field(..., min_length=1, description="Details of the interaction")
+    status: str = Field(default="pending", description="Outcome status (e.g., 'contacted')")
+    next_contact_date: Optional[date] = None
 
 class FollowupCreate(FollowupBase):
     pass
@@ -14,4 +14,6 @@ class FollowupCreate(FollowupBase):
 class Followup(FollowupBase):
     id: int
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
+
+    class Config:
+        from_attributes = True

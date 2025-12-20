@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
-from typing import List, Optional
 
 class DataSource(str, Enum):
     CRM = "crm"
@@ -21,13 +21,10 @@ class ConfidenceSignal(BaseModel):
     message: str
 
 class ConfidenceScore(BaseModel):
-    # --- Existing Fields ---
-    score: float = Field(..., ge=0, le=100)
+    score: float
     level: str
     signals: List[ConfidenceSignal]
-    metrics: dict
-
-    # --- New Explainability & Governance Fields ---
-    explanation_summary: Optional[str] = None
-    explanation_details: Optional[List[str]] = None
-    decision_guidance: Optional[str] = None
+    metrics: Dict[str, Any]
+    explanation_summary: str
+    explanation_details: List[str]
+    decision_guidance: str

@@ -6,7 +6,7 @@ from datetime import datetime
 from app.models.decision_feedback import DecisionFeedback, DecisionFeedbackType
 from app.models.learning_review import LearningReview, ReviewStatus
 from app.schemas.learning_review import LearningReviewCreate, LearningReviewUpdate
-from app.core.security import UserRole
+from app.core.auth.security import UserRole
 
 def aggregate_learning_insights(db: Session) -> Dict[str, Any]:
     """

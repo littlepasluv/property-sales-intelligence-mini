@@ -6,9 +6,9 @@ import logging
 from app.core.database import get_db
 from app.schemas.confidence import ConfidenceScore, ConfidenceSignal
 from app.schemas.audit_log import AuditLogCreate
-from app.services.confidence_service import get_system_confidence
-from app.services.audit_log_service import create_audit_log_entry
-from app.core.security import UserRole, require_roles, get_current_user_role
+from app.core.decision.confidence import get_system_confidence
+from app.core.governance.audit import create_audit_log_entry
+from app.core.auth.security import UserRole, require_roles, get_current_user_role
 
 router = APIRouter(
     prefix="/analytics",

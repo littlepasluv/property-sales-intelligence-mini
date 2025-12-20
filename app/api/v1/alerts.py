@@ -11,7 +11,7 @@ from app.services import (
 )
 from app.services.lead_service import get_all_leads
 from app.ingestion.registry import registry
-from app.core.security import require_roles, UserRole
+from app.core.auth.security import require_roles, UserRole
 
 router = APIRouter(
     prefix="/alerts",

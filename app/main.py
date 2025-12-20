@@ -7,10 +7,11 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.api.v1 import lead, followup, listing, analytics, governance, ingestion, system, health, alerts, auth, decisions, simulation, learning
+from app.verticals.property_sales import api as property_sales_api
 from app.core.database import engine, Base, get_db
-from app.services.audit_log_service import create_audit_log_entry
+from app.core.governance.audit import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
-from app.core.security import get_current_user, UserContext
+from app.core.auth.security import get_current_user, UserContext
 from app.services.decision_sla_service import evaluate_decision_sla
 
 # Ensure all models are imported before creating tables
@@ -75,6 +76,7 @@ app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(decisions.router, prefix="/api/v1")
 app.include_router(simulation.router, prefix="/api/v1")
 app.include_router(learning.router, prefix="/api/v1")
+app.include_router(property_sales_api.router, prefix="/api/v1")
 
 @app.get("/", tags=["Root"])
 def read_root():

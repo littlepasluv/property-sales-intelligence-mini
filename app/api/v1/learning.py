@@ -5,12 +5,12 @@ from typing import Dict, Any, List
 import json
 
 from app.core.database import get_db
-from app.core.security import get_current_user_role, UserRole, require_roles, UserContext, get_current_user
+from app.core.auth.security import get_current_user_role, UserRole, require_roles, UserContext, get_current_user
 from app.models.decision_feedback import DecisionFeedback, DecisionFeedbackType
 from app.schemas.decision_feedback import DecisionFeedbackCreate, DecisionFeedbackRead
 from app.models.learning_review import LearningReview
 from app.schemas.learning_review import LearningReviewRead, LearningReviewUpdate
-from app.services.audit_log_service import create_audit_log_entry
+from app.core.governance.audit import create_audit_log_entry
 from app.schemas.audit_log import AuditLogCreate
 from app.services.learning_service import (
     aggregate_learning_insights, 

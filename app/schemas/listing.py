@@ -1,7 +1,15 @@
 from pydantic import BaseModel
 
-class Listing(BaseModel):
-    id: int
+class ListingBase(BaseModel):
     address: str
     price: float
     agent_id: int
+
+class ListingCreate(ListingBase):
+    pass
+
+class Listing(ListingBase):
+    id: int
+
+    class Config:
+        from_attributes = True
